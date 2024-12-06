@@ -1,0 +1,33 @@
+services:
+  db:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: streaming
+    volumes:
+      - db-data:/var/lib/mysql
+    networks:
+      - private_network
+  app:
+    image: goapp
+    ports:
+      - "443:443" # Pour l'application Go
+    volumes:
+      - /all:/all # Point de montage pour le code Go
+      - /app/assets/:/app/assets/ # Point de montage pour les assets
+      - /app/friendly-adventure/config.json:/app/config.json # Point de montage pour le cache
+      - /app/friendly-adventure/cache/:/app/friendly-adventure/cache/ # Point de montage pour le cache
+      #to be removed
+      - /app/friendly-adventure/bin:/app/bin # Point de montage pour le cache 
+      # - /app/:/app/
+    depends_on:
+      - db
+    networks:
+      - private_network
+    entrypoint: ["sh", "-c", "sleep 15 && /app/bin"]
+volumes:
+  db-data:
+networks:
+  private_network:
+    driver: bridge

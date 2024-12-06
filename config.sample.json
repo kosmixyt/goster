@@ -1,0 +1,72 @@
+{
+  "scan_paths": [
+    {
+      "name": "homelab",
+      "type": "sftp",
+      "options": {
+        "host": "host_ip",
+        "port": "22",
+        "user": "username",
+        "pass": "password",
+        "path": ["/DATA/DOWNLOADS/movie/", "/DATA/DOWNLOADS/serie/"]
+      }
+    },
+
+    {
+      "name": "seedhost",
+      "type": "sftp",
+      "options": {
+        "host": "seedbox",
+        "port": "22",
+        "user": "username",
+        "pass": "password",
+        "path": ["/path/to/media/movies/", "/path/to/media/serie"]
+      }
+    }
+  ],
+  "db": { 
+    "driver": "mysql",
+    "host": "localhost", "port": "3306", "username": "root", "password": "", "database": "streaming" },
+  "cert": { "key": "/app/assets/ssl/privkey.pem", "cert": "/app/assets/ssl/fullchain.pem" },
+  "limits": {
+    "check_interval": 24,
+    "movie_size": 5368709120,
+    "season_size": 21474836480
+  },
+  "transcoder": { "ffmpeg": "/usr/bin/ffmpeg", "ffprobe": "/usr/bin/ffprobe" },
+  "torrents": { "download_path": "/homelab/dl/" },
+  "web": {
+    "public_url": "/api",
+    "public_port": "443",
+    "cross_origin": "http://localhost:3000"
+  },
+  "cache_path": "/app/assets/cache/",
+  "metadata": {
+    "tmdb": "",
+    "tmdb_iso3166": "FR",
+    "tmdb_movie_watch_providers": {
+      "Netflix": 8,
+      "Disney Plus": 337,
+      "Amazon Prime Video": 119,
+      "Apple Tv Plus": 350,
+      "Canal +": 381,
+      "Google Play Movies": 3,
+      "Filmo TV": 138,
+      "Amazon Video": 10
+    },
+    "tmdb_tv_watch_providers": {},
+    "omdb": "",
+    "tmdb_lang": "fr",
+    "tmdb_lang_imgs": ["fr", "en", "null"]
+  },
+  "cloudflare": {
+    "challenge_resolver": "puppeteer",
+    "flaresolverr_url": "http://192.168.1.1:12845/v1",
+    "capsolverr_proxy_url": "",
+    "capsolverr_api_key": ""
+  },
+  "torrent_providers": {
+    "sharewood": { "key": "", "username": "", "password": "" },
+    "ygg": { "username": "", "password": "" }
+  }
+}
