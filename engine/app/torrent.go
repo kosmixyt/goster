@@ -9,7 +9,6 @@ import (
 	"slices"
 	"sort"
 	"strconv"
-	"syscall"
 	"time"
 
 	"io"
@@ -744,13 +743,4 @@ func GetPathWithFreeSpaceStr() map[string]int64 {
 		}
 	}
 	return paths
-}
-func GetAvailableSizeInDownloadPath() int64 {
-	var stat syscall.Statfs_t
-	err := syscall.Statfs(Config.Torrents.DownloadPath, &stat)
-	if err != nil {
-		panic(err)
-	}
-	freeSpace := stat.Bavail * uint64(stat.Bsize)
-	return int64(freeSpace)
 }

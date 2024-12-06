@@ -3,7 +3,6 @@ package engine
 import (
 	"bufio"
 	"errors"
-	"syscall"
 	"time"
 
 	"fmt"
@@ -49,7 +48,9 @@ func (c *Convert) Pause() error {
 	if c.Command == nil {
 		return errors.New("command is nil")
 	}
-	c.Command.Process.Signal(syscall.SIGSTOP)
+	if err := kosmixutil.PauseExec(c.Command); err != nil {
+		return err
+	}
 	c.Paused = true
 	return nil
 }
@@ -57,7 +58,9 @@ func (c *Convert) Resume() error {
 	if c.Command == nil {
 		return errors.New("command is nil")
 	}
-	c.Command.Process.Signal(syscall.SIGCONT)
+	if err := kosmixutil.ResumeExec(c.Command); err != nil {
+		return err
+	}
 	c.Paused = false
 	return nil
 }

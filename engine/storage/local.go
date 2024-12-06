@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 )
 
 type LocalStorage struct {
@@ -46,16 +45,6 @@ func (l *LocalStorage) GetReader(path string) (io.ReadSeekCloser, error) {
 		return nil, err
 	}
 	return file, nil
-}
-
-func (l *LocalStorage) GetFreeSpace(path string) (uint64, error) {
-	var stat syscall.Statfs_t
-	err := syscall.Statfs(path, &stat)
-	if err != nil {
-		panic(err)
-	}
-	freeSpace := stat.Bavail * uint64(stat.Bsize)
-	return freeSpace, nil
 }
 
 func (l *LocalStorage) Paths() []string {

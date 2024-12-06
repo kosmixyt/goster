@@ -2,10 +2,12 @@ package admin
 
 import (
 	"runtime"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	engine "kosmix.fr/streaming/engine/app"
+	"kosmix.fr/streaming/engine/storage"
 	"kosmix.fr/streaming/kosmixutil"
 )
 
@@ -15,7 +17,13 @@ func AdminInfo(ctx *gin.Context, db *gorm.DB) {
 	var mem runtime.MemStats
 	runtime.ReadMemStats(&mem)
 	ss := engine.SystemInfo
-
+	var aval string
+	av, err := storage.GetAvailableSizeInDownloadPath(engine.Config.Torrents.DownloadPath)
+	if err != nil {
+		aval = err.Error()
+	} else {
+		aval = strconv.FormatUint(av, 10)
+	}
 	data := gin.H{
 		"goroutines":    totalGoroutines,
 		"totalmemory":   mem.Alloc,
@@ -23,7 +31,7 @@ func AdminInfo(ctx *gin.Context, db *gorm.DB) {
 		"goversion":     runtime.Version(),
 		"os":            runtime.GOOS,
 		"paths":         storages,
-		"download_path": engine.GetAvailableSizeInDownloadPath(),
+		"download_path": aval,
 		"users":         GetUserResume(db),
 		"info": gin.H{
 			"virtual":        ss.System.Virtual,

@@ -99,7 +99,7 @@ func WebServer(db *gorm.DB, port string) {
 	r.GET("/api/share/remove", func(ctx *gin.Context) { share.DeleteShare(ctx, db) })
 	r.POST("/api/request/new", func(ctx *gin.Context) { dlrequest.NewDownloadRequest(db, ctx) })
 	r.GET("/api/request/remove", func(ctx *gin.Context) { dlrequest.DeleteRequest(db, ctx) })
-	r.GET("/api/pty", func(ctx *gin.Context) { admin.PtyConnector(ctx, db) })
+	// r.GET("/api/pty", func(ctx *gin.Context) { admin.PtyConnector(ctx, db) })
 	r.GET("/api/admin/ffprobe/:file_id", func(ctx *gin.Context) { admin.GetFFprobe(ctx, db, r) })
 	r.GET("/api/torrents/file", func(ctx *gin.Context) { torrents.TorrentFileDownload(ctx, db) })
 	r.GET("/api/torrents/action", func(ctx *gin.Context) { torrents.TorrentAction(ctx, db) })
