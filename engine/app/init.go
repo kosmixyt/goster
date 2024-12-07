@@ -38,8 +38,6 @@ func GetDbConn() *gorm.DB {
 }
 
 func Init() *gorm.DB {
-	TestFilenames()
-	return nil
 	dbClient := GetDbConn()
 	go kosmixutil.GetDynamicData()
 	if ss, err := kosmixutil.GetSystemInfo(); err == nil {

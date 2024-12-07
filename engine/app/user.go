@@ -34,7 +34,7 @@ type User struct {
 	CURRENT_UPLOAD_SIZE       int64                 `gorm:"not null"`
 	ALLOWED_UPLOAD_SIZE       int64                 `gorm:"not null"`
 	REAL_UPLOAD_SIZE          int64                 `gorm:"not null"`
-	TORRENT_DOWNLOAD_STRATEGY string                `gorm:"not null"`
+	TORRENT_DOWNLOAD_STRATEGY string                `gorm:"not null;default:on_demand"`
 	TORRENTS                  []Torrent             `gorm:"foreignKey:USER_ID"`
 	WATCH_LIST_MOVIES         []MOVIE               `gorm:"many2many:watch_list_movies;"`
 	WATCH_LIST_TVS            []TV                  `gorm:"many2many:watch_list_tvs;"`
