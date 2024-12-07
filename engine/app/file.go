@@ -271,7 +271,8 @@ func (f *FILE) GetWatching(user *User, preload func() *gorm.DB) *WATCHING {
 			watch.EPISODE_ID = &f.EPISODE_ID
 			watch.TV_ID = f.TV_ID
 		}
-		if err := db.Create(&watch).Error; err != nil {
+		err := db.Create(&watch).Error
+		if err != nil {
 			panic(err)
 		}
 		if err := preload().Where("id = ?", watch.ID).First(&watch).Error; err != nil {

@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"fmt"
 	"sync"
 )
 
@@ -16,9 +17,10 @@ var Providers []TorrentProvider = []TorrentProvider{&YGG, &SHAREWOOD}
 
 func ProviderInit() {
 	for _, provider := range Providers {
+		fmt.Println("Provider: ", provider.Enabled())
 		if provider.Enabled() {
 			if err := provider.Init(); err != nil {
-				provider = nil
+				panic(err)
 			} else {
 				number_of_provider++
 			}

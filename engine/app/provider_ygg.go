@@ -21,6 +21,7 @@ import (
 	"github.com/PuerkitoBio/goquery"
 	"github.com/dlclark/regexp2"
 	"github.com/google/uuid"
+	"kosmix.fr/streaming/kosmixutil"
 )
 
 const YGG_URL = "https://www.ygg.re"
@@ -156,7 +157,7 @@ func InitHttpClient() error {
 		return nil
 	}
 	if challenge_type == "puppeteer" {
-		if _, err := os.Stat("./wrapper"); os.IsNotExist(err) {
+		if _, err := os.Stat(kosmixutil.GetWrapperPath()); os.IsNotExist(err) {
 			return errors.New("wrapper not found")
 		}
 		fmt.Println("Using puppeteer")

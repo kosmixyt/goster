@@ -408,7 +408,6 @@ func GetRecent(db *gorm.DB, user User) *Line_Render {
 		Order("created_at desc").
 		Preload("PROVIDERS").
 		Preload("GENRE").
-		Where("BACKDROP_IMAGE_STORAGE_TYPE != 2").
 		Preload("WATCHING", "user_id = ? ", user.ID).
 		Preload("WATCHLISTS", "id = ? ", user.ID).
 		Limit(15)
@@ -416,7 +415,6 @@ func GetRecent(db *gorm.DB, user User) *Line_Render {
 		Order("created_at desc").
 		Preload("PROVIDERS").
 		Preload("GENRE").
-		Where("BACKDROP_IMAGE_STORAGE_TYPE != 2").
 		Preload("WATCHING", "user_id = ? ", user.ID).
 		Preload("WATCHLISTS", "id = ? ", user.ID).
 		Limit(15)

@@ -344,8 +344,8 @@ func (t *Transcoder) Start(index int, Quality QUALITY, trackIndex int) {
 		"-map", "0:v:0",
 		"-map", "0:a:" + strconv.Itoa(trackIndex),
 		// to update
-		// "-s", strconv.Itoa(Quality.Width) + "x" + strconv.Itoa(Quality.Resolution),
-		"-s", "1280x720",
+		"-s", strconv.Itoa(Quality.Width) + "x" + strconv.Itoa(Quality.Resolution),
+		// "-s", "1280x720",
 		"-b:a", strconv.Itoa(Quality.AudioBitrate) + "k",
 	}...)
 	cmdTail := []string{
@@ -503,7 +503,7 @@ func (f *FFPROBE_DATA) AdaptativeQualitys() []QUALITY {
 	qualitys := make([]QUALITY, 5)
 	bit_rate := f.Format.BitRate
 	if bit_rate == "" {
-		bit_rate = "1000000"
+		bit_rate = "10000000"
 		fmt.Println("No bit rate generating for 1080p")
 	}
 	bitRate, err := strconv.Atoi(bit_rate)

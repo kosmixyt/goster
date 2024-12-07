@@ -9,16 +9,15 @@ import (
 
 type SEASON struct {
 	gorm.Model
-	ID                          uint       `gorm:"unique;not null,primary_key"` // use
-	EPISODES                    []*EPISODE `gorm:"foreignKey:SEASON_ID"`
-	TV_ID                       uint
-	TV                          TV             `gorm:"foreignKey:TV_ID"`
-	NAME                        string         `gorm:"not null"`
-	NUMBER                      int            `gorm:"not null"`
-	DESCRIPTION                 string         `gorm:"not null"`
-	BACKDROP_IMAGE_PATH         string         `gorm:"not null"`
-	BACKDROP_IMAGE_STORAGE_TYPE int            `gorm:"not null"`
-	TORRENT_FILES               []Torrent_File `gorm:"foreignKey:SEASON_ID"`
+	ID                  uint       `gorm:"unique;not null,primary_key"` // use
+	EPISODES            []*EPISODE `gorm:"foreignKey:SEASON_ID"`
+	TV_ID               uint
+	TV                  TV             `gorm:"foreignKey:TV_ID"`
+	NAME                string         `gorm:"not null"`
+	NUMBER              int            `gorm:"not null"`
+	DESCRIPTION         string         `gorm:"not null"`
+	BACKDROP_IMAGE_PATH string         `gorm:"not null"`
+	TORRENT_FILES       []Torrent_File `gorm:"foreignKey:SEASON_ID"`
 }
 
 func (s *SEASON) GetNumberAsString(withC bool) string {
