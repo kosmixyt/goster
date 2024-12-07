@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -91,8 +90,6 @@ func (t *Transcoder) Manifest(Manifest chan string) {
 				stime = float64(duration) - i
 			}
 			manifest = append(manifest, "#EXTINF:"+fmt.Sprintf("%.*f", 3, stime))
-			// t.SEGMENTS[int(i/SEGMENT_TIME)] = make(map[uint32]chan func() io.Reader)
-			// t.SEGMENTS[uint32(i/SEGMENT_TIME)] = make(chan func() io.Reader)
 			index := i / SEGMENT_TIME
 			manifest = append(manifest, Config.Web.PublicUrl+"/transcode/segment/"+t.UUID+"/"+strconv.Itoa(int(index)))
 		}
@@ -189,7 +186,7 @@ func (t *Transcoder) Chunk(index int, quality QUALITY, trackIndex int) (io.Reade
 		return nil, fmt.Errorf("invalid index")
 	}
 	if index > int(t.START_INDEX) && index < int(t.CURRENT_INDEX) && t.CURRENT_QUALITY.Name == quality.Name && t.CURRENT_TRACK == trackIndex {
-		return ReadTranscodeFile(filepath.Join(HLS_OUTPUT_PATH, (t.UUID)+"_"+t.CURRENT_QUALITY.Name+"_"+strconv.Itoa(t.CURRENT_TRACK)+"_"+fmt.Sprintf("%0"+strconv.Itoa(FormatZero)+"d", index)+".ts")), nil
+		return ReadTranscodeFile(Joins(HLS_OUTPUT_PATH, (t.UUID)+"_"+t.CURRENT_QUALITY.Name+"_"+strconv.Itoa(t.CURRENT_TRACK)+"_"+fmt.Sprintf("%0"+strconv.Itoa(FormatZero)+"d", index)+".ts")), nil
 	}
 	if t.CURRENT_QUALITY.Name != quality.Name || t.CURRENT_TRACK != trackIndex {
 		fmt.Println("bad quality")
@@ -361,7 +358,7 @@ func (t *Transcoder) Start(index int, Quality QUALITY, trackIndex int) {
 	}
 	cmdFlags := []string{
 		"-movflags", "+faststart",
-		filepath.Join(HLS_OUTPUT_PATH, (t.UUID)+"_"+Quality.Name+"_"+strconv.Itoa(trackIndex)+"_%0"+strconv.Itoa(FormatZero)+"d.ts"),
+		Joins(HLS_OUTPUT_PATH, (t.UUID)+"_"+Quality.Name+"_"+strconv.Itoa(trackIndex)+"_%0"+strconv.Itoa(FormatZero)+"d.ts"),
 	}
 	args = append(args, cmdHead...)
 	args = append(args, cmdVideo...)
@@ -450,7 +447,7 @@ func (t *Transcoder) Start(index int, Quality QUALITY, trackIndex int) {
 					t.SEGMENTS[ii] = make(chan func() io.Reader)
 				}
 				t.SEGMENTS[ii] <- func() io.Reader {
-					return ReadTranscodeFile(filepath.Join(HLS_OUTPUT_PATH, (t.UUID)+"_"+Quality.Name+"_"+strconv.Itoa(trackIndex)+"_"+ProgressesIndex[1]+".ts"))
+					return ReadTranscodeFile(Joins(HLS_OUTPUT_PATH, (t.UUID)+"_"+Quality.Name+"_"+strconv.Itoa(trackIndex)+"_"+ProgressesIndex[1]+".ts"))
 				}
 			}()
 		}

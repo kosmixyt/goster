@@ -3,7 +3,9 @@ package kosmixutil
 import (
 	"bufio"
 	"encoding/json"
+	"os"
 	"os/exec"
+	"runtime"
 )
 
 type SystemInfoOut struct {
@@ -64,64 +66,64 @@ type SystemInfoOut struct {
 		Hardware string   `json:"hardware"`
 		Macs     []string `json:"macs"`
 	} `json:"uuid"`
-	Versions struct {
-		Kernel           string `json:"kernel"`
-		Openssl          string `json:"openssl"`
-		SystemOpenssl    string `json:"systemOpenssl"`
-		SystemOpensslLib string `json:"systemOpensslLib"`
-		Node             string `json:"node"`
-		V8               string `json:"v8"`
-		Npm              string `json:"npm"`
-		Yarn             string `json:"yarn"`
-		Pm2              string `json:"pm2"`
-		Gulp             string `json:"gulp"`
-		Grunt            string `json:"grunt"`
-		Git              string `json:"git"`
-		Tsc              string `json:"tsc"`
-		Mysql            string `json:"mysql"`
-		Redis            string `json:"redis"`
-		Mongodb          string `json:"mongodb"`
-		Apache           string `json:"apache"`
-		Nginx            string `json:"nginx"`
-		Php              string `json:"php"`
-		Docker           string `json:"docker"`
-		Postfix          string `json:"postfix"`
-		Postgresql       string `json:"postgresql"`
-		Perl             string `json:"perl"`
-		Python           string `json:"python"`
-		Python3          string `json:"python3"`
-		Pip              string `json:"pip"`
-		Pip3             string `json:"pip3"`
-		Java             string `json:"java"`
-		Gcc              string `json:"gcc"`
-		Virtualbox       string `json:"virtualbox"`
-		Bash             string `json:"bash"`
-		Zsh              string `json:"zsh"`
-		Fish             string `json:"fish"`
-		Powershell       string `json:"powershell"`
-		Dotnet           string `json:"dotnet"`
-	} `json:"versions"`
+	// Versions struct {
+	// 	Kernel           string `json:"kernel"`
+	// 	Openssl          string `json:"openssl"`
+	// 	SystemOpenssl    string `json:"systemOpenssl"`
+	// 	SystemOpensslLib string `json:"systemOpensslLib"`
+	// 	Node             string `json:"node"`
+	// 	V8               string `json:"v8"`
+	// 	Npm              string `json:"npm"`
+	// 	Yarn             string `json:"yarn"`
+	// 	Pm2              string `json:"pm2"`
+	// 	Gulp             string `json:"gulp"`
+	// 	Grunt            string `json:"grunt"`
+	// 	Git              string `json:"git"`
+	// 	Tsc              string `json:"tsc"`
+	// 	Mysql            string `json:"mysql"`
+	// 	Redis            string `json:"redis"`
+	// 	Mongodb          string `json:"mongodb"`
+	// 	Apache           string `json:"apache"`
+	// 	Nginx            string `json:"nginx"`
+	// 	Php              string `json:"php"`
+	// 	Docker           string `json:"docker"`
+	// 	Postfix          string `json:"postfix"`
+	// 	Postgresql       string `json:"postgresql"`
+	// 	Perl             string `json:"perl"`
+	// 	Python           string `json:"python"`
+	// 	Python3          string `json:"python3"`
+	// 	Pip              string `json:"pip"`
+	// 	Pip3             string `json:"pip3"`
+	// 	Java             string `json:"java"`
+	// 	Gcc              string `json:"gcc"`
+	// 	Virtualbox       string `json:"virtualbox"`
+	// 	Bash             string `json:"bash"`
+	// 	Zsh              string `json:"zsh"`
+	// 	Fish             string `json:"fish"`
+	// 	Powershell       string `json:"powershell"`
+	// 	Dotnet           string `json:"dotnet"`
+	// } `json:"versions"`
 	CPU struct {
-		Manufacturer     string `json:"manufacturer"`
-		Brand            string `json:"brand"`
-		Vendor           string `json:"vendor"`
-		Family           string `json:"family"`
-		Model            string `json:"model"`
-		Stepping         string `json:"stepping"`
-		Revision         string `json:"revision"`
-		Voltage          string `json:"voltage"`
-		Speed            int    `json:"speed"`
-		SpeedMin         any    `json:"speedMin"`
-		SpeedMax         any    `json:"speedMax"`
-		Governor         string `json:"governor"`
-		Cores            int    `json:"cores"`
-		PhysicalCores    int    `json:"physicalCores"`
-		PerformanceCores int    `json:"performanceCores"`
-		EfficiencyCores  int    `json:"efficiencyCores"`
-		Processors       int    `json:"processors"`
-		Socket           string `json:"socket"`
-		Flags            string `json:"flags"`
-		Virtualization   bool   `json:"virtualization"`
+		Manufacturer     string  `json:"manufacturer"`
+		Brand            string  `json:"brand"`
+		Vendor           string  `json:"vendor"`
+		Family           string  `json:"family"`
+		Model            string  `json:"model"`
+		Stepping         string  `json:"stepping"`
+		Revision         string  `json:"revision"`
+		Voltage          string  `json:"voltage"`
+		Speed            float64 `json:"speed"`
+		SpeedMin         any     `json:"speedMin"`
+		SpeedMax         any     `json:"speedMax"`
+		Governor         string  `json:"governor"`
+		Cores            int     `json:"cores"`
+		PhysicalCores    int     `json:"physicalCores"`
+		PerformanceCores int     `json:"performanceCores"`
+		EfficiencyCores  int     `json:"efficiencyCores"`
+		Processors       int     `json:"processors"`
+		Socket           string  `json:"socket"`
+		Flags            string  `json:"flags"`
+		Virtualization   bool    `json:"virtualization"`
 		Cache            struct {
 			L1D int `json:"l1d"`
 			L1I int `json:"l1i"`
@@ -142,28 +144,28 @@ type SystemInfoOut struct {
 		} `json:"controllers"`
 		Displays []any `json:"displays"`
 	} `json:"graphics"`
-	Net []struct {
-		Iface          string `json:"iface"`
-		IfaceName      string `json:"ifaceName"`
-		Default        bool   `json:"default"`
-		IP4            string `json:"ip4"`
-		IP4Subnet      string `json:"ip4subnet"`
-		IP6            string `json:"ip6"`
-		IP6Subnet      string `json:"ip6subnet"`
-		Mac            string `json:"mac"`
-		Internal       bool   `json:"internal"`
-		Virtual        bool   `json:"virtual"`
-		Operstate      string `json:"operstate"`
-		Type           string `json:"type"`
-		Duplex         string `json:"duplex"`
-		Mtu            int    `json:"mtu"`
-		Speed          any    `json:"speed"`
-		Dhcp           bool   `json:"dhcp"`
-		DNSSuffix      string `json:"dnsSuffix"`
-		Ieee8021XAuth  string `json:"ieee8021xAuth"`
-		Ieee8021XState string `json:"ieee8021xState"`
-		CarrierChanges int    `json:"carrierChanges"`
-	} `json:"net"`
+	// Net []struct {
+	// 	Iface          string  `json:"iface"`
+	// 	IfaceName      string  `json:"ifaceName"`
+	// 	Default        bool    `json:"default"`
+	// 	IP4            string  `json:"ip4"`
+	// 	IP4Subnet      string  `json:"ip4subnet"`
+	// 	IP6            string  `json:"ip6"`
+	// 	IP6Subnet      string  `json:"ip6subnet"`
+	// 	Mac            string  `json:"mac"`
+	// 	Internal       bool    `json:"internal"`
+	// 	Virtual        bool    `json:"virtual"`
+	// 	Operstate      string  `json:"operstate"`
+	// 	Type           string  `json:"type"`
+	// 	Duplex         string  `json:"duplex"`
+	// 	Mtu            float64 `json:"mtu"`
+	// 	Speed          any     `json:"speed"`
+	// 	Dhcp           bool    `json:"dhcp"`
+	// 	DNSSuffix      string  `json:"dnsSuffix"`
+	// 	Ieee8021XAuth  string  `json:"ieee8021xAuth"`
+	// 	Ieee8021XState string  `json:"ieee8021xState"`
+	// 	CarrierChanges int     `json:"carrierChanges"`
+	// } `json:"net"`
 	MemLayout []struct {
 		Size              int64  `json:"size"`
 		Bank              string `json:"bank"`
@@ -178,29 +180,37 @@ type SystemInfoOut struct {
 		VoltageMin        any    `json:"voltageMin"`
 		VoltageMax        any    `json:"voltageMax"`
 	} `json:"memLayout"`
-	DiskLayout []struct {
-		Device            string `json:"device"`
-		Type              string `json:"type"`
-		Name              string `json:"name"`
-		Vendor            string `json:"vendor"`
-		Size              int64  `json:"size"`
-		BytesPerSector    any    `json:"bytesPerSector"`
-		TotalCylinders    any    `json:"totalCylinders"`
-		TotalHeads        any    `json:"totalHeads"`
-		TotalSectors      any    `json:"totalSectors"`
-		TotalTracks       any    `json:"totalTracks"`
-		TracksPerCylinder any    `json:"tracksPerCylinder"`
-		SectorsPerTrack   any    `json:"sectorsPerTrack"`
-		FirmwareRevision  string `json:"firmwareRevision"`
-		SerialNum         string `json:"serialNum"`
-		InterfaceType     string `json:"interfaceType"`
-		SmartStatus       string `json:"smartStatus"`
-		Temperature       any    `json:"temperature"`
-	} `json:"diskLayout"`
+	// DiskLayout []struct {
+	// 	Device            string `json:"device"`
+	// 	Type              string `json:"type"`
+	// 	Name              string `json:"name"`
+	// 	Vendor            string `json:"vendor"`
+	// 	Size              int64  `json:"size"`
+	// 	BytesPerSector    any    `json:"bytesPerSector"`
+	// 	TotalCylinders    any    `json:"totalCylinders"`
+	// 	TotalHeads        any    `json:"totalHeads"`
+	// 	TotalSectors      any    `json:"totalSectors"`
+	// 	TotalTracks       any    `json:"totalTracks"`
+	// 	TracksPerCylinder any    `json:"tracksPerCylinder"`
+	// 	SectorsPerTrack   any    `json:"sectorsPerTrack"`
+	// 	FirmwareRevision  string `json:"firmwareRevision"`
+	// 	SerialNum         string `json:"serialNum"`
+	// 	InterfaceType     string `json:"interfaceType"`
+	// 	SmartStatus       string `json:"smartStatus"`
+	// 	Temperature       any    `json:"temperature"`
+	// } `json:"diskLayout"`
+}
+
+func GetWrapperPath() string {
+	if runtime.GOOS == "windows" {
+		return "wrapper.exe"
+	}
+	return "wrapper"
 }
 
 func GetSystemInfo() (*SystemInfoOut, error) {
-	cmd := exec.Command("./wrapper", "pc-info")
+	cmd := exec.Command("./"+GetWrapperPath(), "pc-info")
+	cmd.Dir, _ = os.Getwd()
 	out, err := cmd.Output()
 	if err != nil {
 		// panic(err)

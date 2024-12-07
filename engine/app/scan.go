@@ -38,7 +38,6 @@ func Scan(locations []StorageElement, db *gorm.DB) {
 		if location.TYPE == "local" {
 			localDeclared = true
 		}
-
 		storage, err := DispatchStorage(location.TYPE)
 		if err != nil {
 			panic(err)
@@ -197,6 +196,7 @@ func Scan(locations []StorageElement, db *gorm.DB) {
 			tonotDelete = append(tonotDelete, fileInDb.ID)
 		}
 	}
+	os.Exit(100)
 	queryTime := time.Now()
 	fmt.Println("Query time: Insert", time.Since(queryTime))
 	DeleteFilesInDb(tonotDelete, db)

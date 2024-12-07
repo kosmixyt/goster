@@ -8,45 +8,46 @@ import (
 	"github.com/dlclark/regexp2"
 )
 
-func getType(f string) string {
-	if GetEpisode(f) != 0 && GetSeason(f) != 0 {
+func GetType(f string, subPath string) string {
+	e, _ := GetEpisode(f)
+	if e == 0 {
+		return "movie"
+	}
+	s, _ := GetSeason(f, subPath)
+	if s == 0 {
+		s, _ = GetSeason(f, subPath)
+	}
+	if s != 0 {
 		return "episode"
 	}
 	return "movie"
 }
 
-func GetEpisode(f string) int {
-	var episodeRegex = regexp.MustCompile(`.*([Ss]([0-9]{2,3})[.]{0,3}[Ee]{0,1}([0-9]{2,3}))`)
+func GetEpisode(f string) (int, string) {
+	var episodeRegex = regexp.MustCompile(`((?:[ÉEeéPpIiSsOoDd]{7}(?:[ \t])|[Ee]{1})([0-9]{1,2}))`)
 	var episode = episodeRegex.FindStringSubmatch(f)
 	if len(episode) > 0 {
-		data, err := strconv.Atoi(episode[3])
+		data, err := strconv.Atoi(episode[2])
 		if err != nil {
-			return 0
+			return 0, ""
 		}
-		return data
+		return data, episode[1]
 	}
-	return 0
+	return 0, ""
 }
-func GetSeason(f string) int {
-	var seasonRegex = regexp.MustCompile(`.*([Ss]([0-9]{2,3})[.]{0,3}[Ee]{0,1}([0-9]{2,3}))`)
-	var season = seasonRegex.FindStringSubmatch(f)
-	if len(season) > 0 {
-		data, err := strconv.Atoi(season[2])
-		if err != nil {
-			return 0
+func GetSeason(f string, subPath string) (int, string) {
+	var seasonRegex = regexp.MustCompile(`((?:[Ss]{1}|[SsAaIiSsOoNn]{6}[ \t])([0-9]{1,2}))`)
+	for _, r := range []string{f, subPath} {
+		var season = seasonRegex.FindStringSubmatch(r)
+		if len(season) > 0 {
+			data, err := strconv.Atoi(season[2])
+			if err != nil {
+				return 0, ""
+			}
+			return data, season[1]
 		}
-		return data
 	}
-	return 0
-}
-
-func getEpisodeData(f string) string {
-	var episodeRegex = regexp.MustCompile(`.*([Ss]([0-9]{2,3})[.]{0,3}[Ee]{0,1}([0-9]{2,3}))`)
-	var episode = episodeRegex.FindStringSubmatch(f)
-	if len(episode) > 0 {
-		return episode[1]
-	}
-	return ""
+	return 0, ""
 }
 
 func IsVideoFile(Filename string) bool {
@@ -111,9 +112,13 @@ func GetTitle(f string) string {
 	if year != -1 {
 		flags = append(flags, strconv.Itoa(year))
 	}
-	episodeData := getEpisodeData(f)
+	_, seasonData := GetSeason(f, "")
+	if seasonData != "" {
+		flags = append(flags, strings.ToLower(seasonData))
+	}
+	_, episodeData := GetEpisode(f)
 	if episodeData != "" {
-		flags = append(flags, episodeData)
+		flags = append(flags, strings.ToLower(episodeData))
 	}
 	var flagsIndexs = []int{}
 	for i := 0; i < len(flags); i++ {
@@ -132,4 +137,80 @@ func GetTitle(f string) string {
 		return ReturnGood(fileName)
 	}
 	return ReturnGood(fileName[:lowestIndex])
+}
+
+var codec_expressions map[string]string = map[string]string{
+	"H264": `[hx]264|avc`,
+	"H265": `[hx]265|hevc`,
+	"XVID": `xvid`,
+}
+
+func GetCodec(f string) string {
+	f = strings.ToLower(f)
+	for codec, expression := range codec_expressions {
+		var codecRegex, err = regexp2.Compile(expression, 0)
+		if err != nil {
+			panic(err)
+		}
+		match, err := codecRegex.FindStringMatch(f)
+		if err != nil {
+			panic(err)
+		}
+		if match != nil {
+			return codec
+		}
+	}
+	return ""
+}
+
+var qualitys map[string]string = map[string]string{
+	"1080p": "1080p|fullhd|fhd",
+	"720p":  "720p|hd|720|1280",
+	"2160p": "2160p|4k|uhd|2160|3840",
+	"480p":  "480p|480",
+	"360p":  "360p|360",
+	"240p":  "240p|240",
+}
+
+func GetQuality(f string) string {
+	f = strings.ToLower(f)
+	for quality, expression := range qualitys {
+		var qualityRegex, err = regexp2.Compile(expression, 0)
+		if err != nil {
+			panic(err)
+		}
+		match, err := qualityRegex.FindStringMatch(f)
+		if err != nil {
+			panic(err)
+		}
+		if match != nil {
+			return quality
+		}
+	}
+	return ""
+}
+func GetSource(f string) string {
+	f = strings.ToLower(f)
+	if strings.Contains(f, "bluray") {
+		if strings.Contains(f, "remux") {
+			return "blurayremux"
+		}
+		return "bluray"
+	}
+	if strings.Contains(f, "web") {
+		if strings.Contains(f, "rip") {
+			return "webrip"
+		}
+		if strings.Contains(f, "dl") {
+			return "webdl"
+		}
+		return "web"
+	}
+	if strings.Contains(f, "dvd") {
+		return "dvd"
+	}
+	if strings.Contains(f, "tv") {
+		return "tv"
+	}
+	return ""
 }

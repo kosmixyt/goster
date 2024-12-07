@@ -150,7 +150,7 @@ func UploadFile(c *gin.Context, db *gorm.DB) {
 // 		c.JSON(400, gin.H{"error": "path not found"})
 // 		return
 // 	}
-// 	outputpath := filepath.Join(c.PostForm("path"), file.Filename)
+// 	outputpath := Joins(c.PostForm("path"), file.Filename)
 // 	if c.PostForm("type") == engine.Movie {
 // 		if t, err := engine.Get_movie_via_provider(c.PostForm("id"), true, func() *gorm.DB { return db.Preload("FILES") }); err != nil {
 // 			c.JSON(500, gin.H{"error": err.Error()})

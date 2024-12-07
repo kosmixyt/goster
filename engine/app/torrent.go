@@ -199,7 +199,7 @@ func RegisterFilesInTorrent(item *GlTorrentItem, movie *MOVIE, season *SEASON) [
 		}
 		if season != nil {
 			file.IS_MEDIA = true
-			episode_number := kosmixutil.GetEpisode(fileObject.Path())
+			episode_number, _ := kosmixutil.GetEpisode(fileObject.Path())
 			if episode_number == 0 {
 				panic("Episode number is " + strconv.Itoa(episode_number))
 			}
@@ -445,7 +445,7 @@ func InitTorrents(db *gorm.DB) {
 	channels := make(chan error, len(torrents))
 	for _, item := range torrents {
 		go func(torrentItem *Torrent) {
-			file, err := os.Open(filepath.Join(FILES_TORRENT_PATH, torrentItem.PATH))
+			file, err := os.Open(Joins(FILES_TORRENT_PATH, torrentItem.PATH))
 			if err != nil {
 				panic("Error opening file" + err.Error())
 			}
@@ -622,7 +622,7 @@ func MoveTargetStorage(torrentItem *torrent.Torrent, dbElement *Torrent, db *gor
 	if item.Torrent == nil {
 		panic("Torrent not found")
 	}
-	file, err := os.Open(filepath.Join(FILES_TORRENT_PATH, dbElement.PATH))
+	file, err := os.Open(Joins(FILES_TORRENT_PATH, dbElement.PATH))
 	if err != nil {
 		panic(err)
 	}

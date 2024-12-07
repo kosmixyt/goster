@@ -11,17 +11,17 @@ import (
 
 type TV struct {
 	gorm.Model
-	ID                uint               `gorm:"unique;not null,primary_key"`
-	TMDB_ID           int                `gorm:"not null"`
-	ALTERNATIVE_NAMES []ALTERNATIVE_NAME `gorm:"foreignKey:TV_ID"`
-	NAME              string             `gorm:"not null"`
-	ORIGINAL_NAME     string             `gorm:"not null"`
-	YEAR              int                `gorm:"not null"`
-	SEASON            []*SEASON          `gorm:"foreignKey:TV_ID"`
-	PROVIDERS         []PROVIDER         `gorm:"many2many:tv_providers;"`
-	FILES             []FILE             `gorm:"foreignKey:TV_ID"`
-	TAGLINE           string             `gorm:"not null"`
-	VIEW              int                `gorm:"not null,default:0"`
+	ID                uint `gorm:"unique;not null,primary_key"`
+	TMDB_ID           int  `gorm:"not null"`
+	ALTERNATIVE_NAMES string
+	NAME              string     `gorm:"not null"`
+	ORIGINAL_NAME     string     `gorm:"not null"`
+	YEAR              int        `gorm:"not null"`
+	SEASON            []*SEASON  `gorm:"foreignKey:TV_ID"`
+	PROVIDERS         []PROVIDER `gorm:"many2many:tv_providers;"`
+	FILES             []FILE     `gorm:"foreignKey:TV_ID"`
+	TAGLINE           string     `gorm:"not null"`
+	VIEW              int        `gorm:"not null,default:0"`
 	// nombre de téléchargement d'épisode
 	DOWNLOAD int `gorm:"not null,default:0"`
 	// nombre de streaming d'épisode

@@ -100,6 +100,7 @@ type TorrentItemRender struct {
 	Link         string `json:"link"`
 	Seed         int    `json:"seed"`
 	Size         int64  `json:"size"`
+	Flags        []string
 }
 type JsonMetadata struct {
 	Size  int64      `json:"size"`

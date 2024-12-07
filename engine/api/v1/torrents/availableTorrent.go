@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	engine "kosmix.fr/streaming/engine/app"
+	"kosmix.fr/streaming/kosmixutil"
 )
 
 func AvailableTorrent(ctx *gin.Context, db *gorm.DB) {
@@ -78,6 +79,7 @@ func AvailableTorrent(ctx *gin.Context, db *gorm.DB) {
 	for i := 0; i < len(items); i++ {
 		item := <-v
 		if item != nil {
+			item.Flags = append(make([]string, 0), kosmixutil.GetCodec(item.Name), kosmixutil.GetQuality(item.Name), kosmixutil.GetSource(item.Name))
 			res = append(res, *item)
 		}
 	}

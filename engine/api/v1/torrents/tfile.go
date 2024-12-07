@@ -1,7 +1,6 @@
 package torrents
 
 import (
-	"path/filepath"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -32,5 +31,5 @@ func TorrentFile(ctx *gin.Context, db *gorm.DB) {
 	}
 	ctx.Header("Content-Disposition", "attachment; filename="+torrent.Torrent.Name()+".torrent")
 	// ctx.File(torrentDbItem.PATH)
-	ctx.File(filepath.Join(engine.FILES_TORRENT_PATH, torrentDbItem.PATH))
+	ctx.File(engine.Joins(engine.FILES_TORRENT_PATH, torrentDbItem.PATH))
 }

@@ -79,7 +79,7 @@ func (iptv *IptvItem) Init(offset *int64) {
 	iptv.CurrentStreamCount = 0
 	iptv.Channels = make([]*IptvChannel, 0)
 	iptv.Groups = make([]*IptvGroup, 0)
-	strbody := string(ReadFile(filepath.Join(IPTV_M3U8_PATH, iptv.FileName)))
+	strbody := string(ReadFile(Joins(IPTV_M3U8_PATH, iptv.FileName)))
 	matches := reg.FindAllStringSubmatch(strbody, -1)
 	for _, match := range matches {
 		*offset += 1
@@ -323,7 +323,7 @@ func (record *Record) Init() {
 		})
 		return
 	}
-	stats, err := record.OutputStorerMem.Conn.Stats(filepath.Join(record.OutputStorerRootPath, record.OutputStorerFileName))
+	stats, err := record.OutputStorerMem.Conn.Stats(Joins(record.OutputStorerRootPath, record.OutputStorerFileName))
 	if err != nil {
 		db.Model(&record).Updates(Record{
 			ERROR: err.Error(),
@@ -392,11 +392,11 @@ func CreateTempFfmpegOutputFile(storage *MemoryStorage, output_root_path string,
 		return nil
 	}
 	if !storage.Conn.NeedProxy() {
-		return filepath.Join(output_root_path, fileName), &nilfunc, nil
+		return Joins(output_root_path, fileName), &nilfunc, nil
 	}
 	file_name_extension := filepath.Ext(fileName)
 	temp_file_name := uuid.NewString() + file_name_extension
-	temp_file_path := filepath.Join(FFMPEG_BIG_FILE_PATH, temp_file_name)
+	temp_file_path := Joins(FFMPEG_BIG_FILE_PATH, temp_file_name)
 	called := false
 	on_finish := func(cancel bool, task *Task) error {
 		if called {
@@ -406,7 +406,7 @@ func CreateTempFfmpegOutputFile(storage *MemoryStorage, output_root_path string,
 		if cancel {
 			return os.Remove(temp_file_path)
 		}
-		writer, err := storage.Conn.GetWriter(filepath.Join(output_root_path, fileName))
+		writer, err := storage.Conn.GetWriter(Joins(output_root_path, fileName))
 		if err != nil {
 			return err
 		}

@@ -2,7 +2,6 @@ package metadata
 
 import (
 	"fmt"
-	"path/filepath"
 	"sort"
 	"strconv"
 
@@ -73,7 +72,7 @@ func GetUnAssignedMedias(ctx *gin.Context, db *gorm.DB) {
 			f := FILEMetadata{
 				ID:   file.ID,
 				NAME: file.FILENAME,
-				PATH: filepath.Join(file.ROOT_PATH, file.SUB_PATH),
+				PATH: engine.Joins(file.ROOT_PATH, file.SUB_PATH),
 				SIZE: file.SIZE,
 			}
 			m.FILES[i] = f
@@ -110,7 +109,7 @@ func GetUnAssignedMedias(ctx *gin.Context, db *gorm.DB) {
 					FILES:  make([]FILEMetadata, len(episode.FILES)),
 				}
 				for c, file := range episode.FILES {
-					f := FILEMetadata{ID: (file.ID), NAME: file.FILENAME, PATH: filepath.Join(file.ROOT_PATH, file.SUB_PATH), SIZE: (file.SIZE)}
+					f := FILEMetadata{ID: (file.ID), NAME: file.FILENAME, PATH: engine.Joins(file.ROOT_PATH, file.SUB_PATH), SIZE: (file.SIZE)}
 					e.FILES[c] = f
 				}
 				// s.Episodes = append(s.Episodes, e)
@@ -127,7 +126,7 @@ func GetUnAssignedMedias(ctx *gin.Context, db *gorm.DB) {
 	db.Where("tv_id IS NULL AND movie_id IS NULL").Find(&orphans)
 	var orphansres []FILEMetadata = make([]FILEMetadata, len(orphans))
 	for i, file := range orphans {
-		orphansres[i] = FILEMetadata{ID: (file.ID), NAME: file.FILENAME, PATH: filepath.Join(file.ROOT_PATH, file.SUB_PATH), SIZE: (file.SIZE)}
+		orphansres[i] = FILEMetadata{ID: (file.ID), NAME: file.FILENAME, PATH: engine.Joins(file.ROOT_PATH, file.SUB_PATH), SIZE: (file.SIZE)}
 	}
 	ctx.JSON(200, gin.H{"movies": moviesres, "tvs": tvsres, "orphans": orphansres})
 
@@ -197,6 +196,14 @@ func AssignFileToMedia(ctx *gin.Context, db *gorm.DB) {
 			Update("tv_id", gorm.Expr("null")).
 			Update("episode_id", gorm.Expr("null")).
 			Update("season_id", gorm.Expr("null")).
+			Where("id = ?", file.ID)
+	} else if ntype == "orphan" {
+		db.
+			Updates(&engine.FILE{ID: file.ID}).
+			Update("tv_id", gorm.Expr("null")).
+			Update("episode_id", gorm.Expr("null")).
+			Update("season_id", gorm.Expr("null")).
+			Update("movie_id", gorm.Expr("null")).
 			Where("id = ?", file.ID)
 	} else {
 		ctx.JSON(400, gin.H{"error": "invalid type"})

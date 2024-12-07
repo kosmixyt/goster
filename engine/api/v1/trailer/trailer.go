@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -28,7 +27,7 @@ func HandleTrailerRequest(ctx *gin.Context, db *gorm.DB) {
 }
 func TrailerController(user *engine.User, itype string, itemId string, ctx *gin.Context) error {
 	var youtube_url string
-	outpu_t_name := filepath.Join(engine.TRAILER_OUTPUT_PATH, itype+"_"+itemId+".mp4")
+	outpu_t_name := engine.Joins(engine.TRAILER_OUTPUT_PATH, itype+"_"+itemId+".mp4")
 	if itype == engine.Tv {
 		tvDbItem, err := engine.Get_tv_via_provider(itemId, false, user.RenderTvPreloads)
 		if err != nil {

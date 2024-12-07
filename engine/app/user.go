@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"slices"
 	"sort"
 	"sync"
@@ -15,35 +14,36 @@ import (
 
 type User struct {
 	gorm.Model
-	ID                    uint                  `gorm:"unique;not null,primary_key"` // use
-	NAME                  string                `gorm:"not null"`
-	EMAIL                 string                `gorm:"unique"`
-	TOKEN                 string                `gorm:"unique;not null"`
-	ADMIN                 bool                  `gorm:"not null,default:false"`
-	CAN_DOWNLOAD          bool                  `gorm:"not null"`
-	CAN_CONVERT           bool                  `gorm:"not null"`
-	CAN_ADD_FILES         bool                  `gorm:"not null"`
-	SHARES                []Share               `gorm:"foreignKey:OWNER_ID"`
-	CAN_UPLOAD            bool                  `gorm:"not null"`
-	CAN_DELETE            bool                  `gorm:"not null"`
-	CAN_EDIT              bool                  `gorm:"not null"`
-	CAN_TRANSCODE         bool                  `gorm:"not null"`
-	MAX_TRANSCODING       int                   `gorm:"not null"`
-	TRANSCODING           int                   `gorm:"not null"`
-	ALLOWED_UPLOAD_NUMBER int64                 `gorm:"not null"`
-	CURRENT_UPLOAD_NUMBER int64                 `gorm:"not null"`
-	CURRENT_UPLOAD_SIZE   int64                 `gorm:"not null"`
-	ALLOWED_UPLOAD_SIZE   int64                 `gorm:"not null"`
-	REAL_UPLOAD_SIZE      int64                 `gorm:"not null"`
-	TORRENTS              []Torrent             `gorm:"foreignKey:USER_ID"`
-	WATCH_LIST_MOVIES     []MOVIE               `gorm:"many2many:watch_list_movies;"`
-	WATCH_LIST_TVS        []TV                  `gorm:"many2many:watch_list_tvs;"`
-	WATCHING              []WATCHING            `gorm:"foreignKey:USER_ID"`
-	IPTVS                 []IptvItem            `gorm:"foreignKey:USER_ID"`
-	Tasks                 []*Task               `gorm:"foreignKey:USER_ID"`
-	Requests              []DownloadRequest     `gorm:"foreignKey:OWNER_ID"`
-	MediaQualityProfiles  []MediaQualityProfile `gorm:"foreignKey:UserID"`
-	MediaQualitys         []MediaQuality        `gorm:"foreignKey:UserID"`
+	ID                        uint                  `gorm:"unique;not null,primary_key"` // use
+	NAME                      string                `gorm:"not null"`
+	EMAIL                     string                `gorm:"unique"`
+	TOKEN                     string                `gorm:"unique;not null"`
+	ADMIN                     bool                  `gorm:"not null,default:false"`
+	CAN_DOWNLOAD              bool                  `gorm:"not null"`
+	CAN_CONVERT               bool                  `gorm:"not null"`
+	CAN_ADD_FILES             bool                  `gorm:"not null"`
+	SHARES                    []Share               `gorm:"foreignKey:OWNER_ID"`
+	CAN_UPLOAD                bool                  `gorm:"not null"`
+	CAN_DELETE                bool                  `gorm:"not null"`
+	CAN_EDIT                  bool                  `gorm:"not null"`
+	CAN_TRANSCODE             bool                  `gorm:"not null"`
+	MAX_TRANSCODING           int                   `gorm:"not null"`
+	TRANSCODING               int                   `gorm:"not null"`
+	ALLOWED_UPLOAD_NUMBER     int64                 `gorm:"not null"`
+	CURRENT_UPLOAD_NUMBER     int64                 `gorm:"not null"`
+	CURRENT_UPLOAD_SIZE       int64                 `gorm:"not null"`
+	ALLOWED_UPLOAD_SIZE       int64                 `gorm:"not null"`
+	REAL_UPLOAD_SIZE          int64                 `gorm:"not null"`
+	TORRENT_DOWNLOAD_STRATEGY string                `gorm:"not null"`
+	TORRENTS                  []Torrent             `gorm:"foreignKey:USER_ID"`
+	WATCH_LIST_MOVIES         []MOVIE               `gorm:"many2many:watch_list_movies;"`
+	WATCH_LIST_TVS            []TV                  `gorm:"many2many:watch_list_tvs;"`
+	WATCHING                  []WATCHING            `gorm:"foreignKey:USER_ID"`
+	IPTVS                     []IptvItem            `gorm:"foreignKey:USER_ID"`
+	Tasks                     []*Task               `gorm:"foreignKey:USER_ID"`
+	Requests                  []DownloadRequest     `gorm:"foreignKey:OWNER_ID"`
+	MediaQualityProfiles      []MediaQualityProfile `gorm:"foreignKey:UserID"`
+	MediaQualitys             []MediaQuality        `gorm:"foreignKey:UserID"`
 }
 
 func (user *User) GetConverts() []*Convert {
@@ -312,7 +312,7 @@ func (user *User) RemoveWatchListTv(tv TV) {
 // 	if resp.StatusCode != 200 {
 // 		return nil, fmt.Errorf("error downloading file")
 // 	}
-// 	file, err := os.Create(filepath.Join(output_path, output_filename))
+// 	file, err := os.Create(Joins(output_path, output_filename))
 // 	if err != nil {
 // 		return nil, err
 // 	}
@@ -511,7 +511,7 @@ func (user *User) GetBestRated() ([]MOVIE, []TV) {
 }
 func (user *User) AddIptv(file io.Reader, maxStreamCount int64) (*IptvItem, error) {
 	output_name := fmt.Sprintf("%s.m3u8", time.Now().Format("2006-01-02-15-04-05"))
-	f, err := os.Create(filepath.Join(IPTV_M3U8_PATH, output_name))
+	f, err := os.Create(Joins(IPTV_M3U8_PATH, output_name))
 	if err != nil {
 		return nil, err
 	}

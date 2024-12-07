@@ -38,12 +38,12 @@ func SetupCachePaths(cache_path string) {
 	if err != nil {
 		panic(err)
 	}
-	IPTV_IMG_PATH = filepath.Join(abs, "iptv_imgs")
-	IPTV_M3U8_PATH = filepath.Join(abs, "iptv")
-	FILES_TORRENT_PATH = filepath.Join(abs, "torrents")
-	HLS_OUTPUT_PATH = filepath.Join(abs, "hls")
-	TRAILER_OUTPUT_PATH = filepath.Join(abs, "trailer")
-	FFMPEG_BIG_FILE_PATH = filepath.Join(abs, "ffmpeg")
+	IPTV_IMG_PATH = Joins(abs, "iptv_imgs")
+	IPTV_M3U8_PATH = Joins(abs, "iptv")
+	FILES_TORRENT_PATH = Joins(abs, "torrents")
+	HLS_OUTPUT_PATH = Joins(abs, "hls")
+	TRAILER_OUTPUT_PATH = Joins(abs, "trailer")
+	FFMPEG_BIG_FILE_PATH = Joins(abs, "ffmpeg")
 	PanicOnError(os.MkdirAll(cache_path, os.ModePerm))
 	PanicOnError(os.MkdirAll(IPTV_IMG_PATH, os.ModePerm))
 	PanicOnError(os.MkdirAll(IPTV_M3U8_PATH, os.ModePerm))

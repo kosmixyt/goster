@@ -64,9 +64,9 @@ func (f *FILE) GetMediaId() int {
 }
 func (f *FILE) GetPath(absolute bool) string {
 	if absolute {
-		return filepath.Join(f.ROOT_PATH, f.SUB_PATH, f.FILENAME)
+		return Joins(f.ROOT_PATH, f.SUB_PATH, f.FILENAME)
 	}
-	return filepath.Join(f.SUB_PATH, f.FILENAME)
+	return Joins(f.SUB_PATH, f.FILENAME)
 }
 
 func (f *FILE) stats() (fs.FileInfo, error) {
@@ -160,16 +160,24 @@ func (f *FILE) ClearFromTranscoder(operation string) {
 	}
 }
 func (f *FILE) EpisodeNumber() int {
-	return kosmixutil.GetEpisode(f.FILENAME)
+	h, _ := kosmixutil.GetEpisode(f.FILENAME)
+	return h
 }
 func (f *FILE) SeasonNumber() int {
-	if r := kosmixutil.GetSeason(f.FILENAME); r != 0 {
-		return r
-	}
-	return kosmixutil.GetSeason(f.SUB_PATH)
+	h, _ := kosmixutil.GetSeason(f.FILENAME, f.SUB_PATH)
+	return h
+}
+func (f *FILE) Quality() string {
+	return kosmixutil.GetQuality(f.FILENAME)
+}
+func (f *FILE) Codec() string {
+	return kosmixutil.GetCodec(f.FILENAME)
+}
+func (f *FILE) Source() string {
+	return kosmixutil.GetSource(f.FILENAME)
 }
 func (f *FILE) IsEpisode() bool {
-	return (kosmixutil.GetSeason(f.FILENAME) != 0 || kosmixutil.GetSeason(f.SUB_PATH) != 0) && (kosmixutil.GetEpisode(f.FILENAME) != 0)
+	return kosmixutil.GetType(f.FILENAME, f.SUB_PATH) == "episode"
 }
 func (f *FILE) GetTitle() string {
 	return kosmixutil.GetTitle(f.FILENAME)
@@ -307,7 +315,7 @@ func (f *FILE) Rename(filename string) error {
 	if err != nil {
 		panic("if file is not torrent should load storage")
 	}
-	storer.toConn().Rename(f.GetPath(true), filepath.Join(f.ROOT_PATH, f.SUB_PATH, filename))
+	storer.toConn().Rename(f.GetPath(true), Joins(f.ROOT_PATH, f.SUB_PATH, filename))
 	db.Model(f).Update("filename", filename)
 	return nil
 }
@@ -328,4 +336,9 @@ func (f *FILE) SkinnyRender(user *User) SKINNY_RENDER {
 		return f.TV.Skinny(f.TV.GetWatching())
 	}
 	panic("file is not movie or tv")
+}
+
+func Joins(paths ...string) string {
+	path := filepath.Join(paths...)
+	return strings.ReplaceAll(path, "\\", "/")
 }

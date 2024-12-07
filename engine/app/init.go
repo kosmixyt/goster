@@ -38,6 +38,8 @@ func GetDbConn() *gorm.DB {
 }
 
 func Init() *gorm.DB {
+	TestFilenames()
+	return nil
 	dbClient := GetDbConn()
 	go kosmixutil.GetDynamicData()
 	if ss, err := kosmixutil.GetSystemInfo(); err == nil {
@@ -66,7 +68,6 @@ func Init() *gorm.DB {
 		&GENRE{},
 		&WATCHING{},
 		&GENERATED_TOKEN{},
-		&ALTERNATIVE_NAME{},
 		&Record{},
 	)
 	admin := &User{
@@ -90,6 +91,7 @@ func Init() *gorm.DB {
 		ALLOWED_UPLOAD_SIZE:   1000_000_000_0,
 		REAL_UPLOAD_SIZE:      0,
 	}
+
 	dbClient.Create(admin)
 	db = dbClient
 	ProviderInit()

@@ -58,11 +58,11 @@ func (t *Torrent_File) Load() ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		WriteFile(bytes.NewReader(fullBuffer), filepath.Join(FILES_TORRENT_PATH, fileName))
+		WriteFile(bytes.NewReader(fullBuffer), Joins(FILES_TORRENT_PATH, fileName))
 		t.PATH = fileName
 		return fullBuffer, nil
 	} else {
-		fio, err := os.Open(filepath.Join(FILES_TORRENT_PATH, t.PATH))
+		fio, err := os.Open(Joins(FILES_TORRENT_PATH, t.PATH))
 		if err != nil {
 			fmt.Println("Error opening file", t.PATH)
 			return nil, err
@@ -79,7 +79,7 @@ func (t *Torrent_File) SetAsManual(file []byte) {
 		panic("Torrent_File.SetAsManual() called with nil ID")
 	}
 	fileName := t.GetFileName()
-	WriteFile(bytes.NewReader(file), filepath.Join(FILES_TORRENT_PATH, fileName))
+	WriteFile(bytes.NewReader(file), Joins(FILES_TORRENT_PATH, fileName))
 	t.PATH = fileName
 	t.Save()
 }
@@ -187,7 +187,7 @@ func (t *Torrent_File) ValidateTorrent(WaitGroup *sync.WaitGroup, channel chan m
 				continue
 			}
 			name := filepath.Base(file.DisplayPath(info))
-			episode_number := kosmixutil.GetEpisode(name)
+			episode_number, _ := kosmixutil.GetEpisode(name)
 			if episode_number == 0 {
 				channel <- map[string]*Torrent_File{"Failed determine episode number for " + file.DisplayPath(info): t}
 				return

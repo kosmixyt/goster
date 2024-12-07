@@ -6,7 +6,6 @@ require (
 	github.com/PuerkitoBio/goquery v1.9.2
 	github.com/anacrolix/generics v0.0.2
 	github.com/anacrolix/torrent v1.56.1
-	github.com/creack/pty v1.1.21
 	github.com/djherbis/buffer v1.2.0
 	github.com/dlclark/regexp2 v1.11.2
 	github.com/gin-contrib/sessions v1.0.1
