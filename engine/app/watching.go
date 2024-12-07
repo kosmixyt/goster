@@ -33,7 +33,7 @@ func (w *WATCHING) GetNextFile() *SKINNY_RENDER {
 			fmt.Println("[WARN] No similar movie found for movie", w.MOVIE.ID)
 			return &SKINNY_RENDER{}
 		}
-		sim := similars[0].Skinny(w, nil)
+		sim := similars[0].Skinny(w)
 		return &sim
 	}
 	if w.TV != nil {
@@ -57,7 +57,7 @@ func (w *WATCHING) GetNextFile() *SKINNY_RENDER {
 }
 func (w *WATCHING) ToSkinny() SKINNY_RENDER {
 	if w.MOVIE != nil {
-		return w.MOVIE.Skinny(w, nil)
+		return w.MOVIE.Skinny(w)
 	}
 	if w.TV != nil {
 		return w.TV.Skinny(w)

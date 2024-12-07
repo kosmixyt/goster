@@ -25,31 +25,26 @@ type TV struct {
 	// nombre de téléchargement d'épisode
 	DOWNLOAD int `gorm:"not null,default:0"`
 	// nombre de streaming d'épisode
-	STREAMING                   int     `gorm:"not null,default:0"`
-	DESCRIPTION                 string  `gorm:"not null"`
-	Director                    string  `gorm:"not null"`
-	Writer                      string  `gorm:"not null"`
-	Awards                      string  `gorm:"not null"`
-	Vote_average                float64 `gorm:"not null"`
-	RATED                       string  `gorm:"not null"`
-	RUNTIME                     int     `gorm:"not null"`
-	VOTE                        float64 `gorm:"not null"`
-	GENRE                       []GENRE `gorm:"many2many:tv_genres;"`
-	BACKDROP_IMAGE_PATH         string  `gorm:"not null"`
-	BACKDROP_IMAGE_STORAGE_TYPE int     `gorm:"not null"`
-	POSTER_IMAGE_PATH           string  `gorm:"not null"`
-	POSTER_IMAGE_STORAGE_TYPE   int     `gorm:"not null"`
-
-	LOGO_IMAGE_PATH string `gorm:"not null"`
-	// 1 = tmdb, 0 = local path, 2 = null
-	LOGO_IMAGE_STORAGE_TYPE int `gorm:"not null"`
-	// empty if no video trailer
-	TRAILER_URL   string             `gorm:"not null"`
-	WATCHLISTS    []User             `gorm:"many2many:watch_list_tvs;"`
-	WATCHING      []WATCHING         `gorm:"foreignKey:TV_ID"`
-	KEYWORDS      []KEYWORD          `gorm:"many2many:tv_keywords;"`
-	REQUESTS      []*DownloadRequest `gorm:"foreignKey:TV_ID"`
-	TORRENT_FILES []Torrent_File     `gorm:"foreignKey:TV_ID"`
+	STREAMING                   int                `gorm:"not null,default:0"`
+	DESCRIPTION                 string             `gorm:"not null"`
+	Director                    string             `gorm:"not null"`
+	Writer                      string             `gorm:"not null"`
+	Awards                      string             `gorm:"not null"`
+	Vote_average                float64            `gorm:"not null"`
+	RATED                       string             `gorm:"not null"`
+	RUNTIME                     int                `gorm:"not null"`
+	VOTE                        float64            `gorm:"not null"`
+	GENRE                       []GENRE            `gorm:"many2many:tv_genres;"`
+	BACKDROP_IMAGE_PATH         string             `gorm:"not null"`
+	BACKDROP_IMAGE_STORAGE_TYPE int                `gorm:"not null"`
+	POSTER_IMAGE_PATH           string             `gorm:"not null"`
+	LOGO_IMAGE_PATH             string             `gorm:"not null"`
+	TRAILER_URL                 string             `gorm:"not null"`
+	WATCHLISTS                  []User             `gorm:"many2many:watch_list_tvs;"`
+	WATCHING                    []WATCHING         `gorm:"foreignKey:TV_ID"`
+	KEYWORDS                    []KEYWORD          `gorm:"many2many:tv_keywords;"`
+	REQUESTS                    []*DownloadRequest `gorm:"foreignKey:TV_ID"`
+	TORRENT_FILES               []Torrent_File     `gorm:"foreignKey:TV_ID"`
 }
 
 func (t *TV) GetExistantSeasonById(id uint) *SEASON {
@@ -128,26 +123,38 @@ func (tv *TV) Render(user *User) TVItem {
 		GENRE:        ParseGenreItem(tv.GENRE),
 		SEASONS:      tv.ToSeason(),
 	}
-	switch tv.BACKDROP_IMAGE_STORAGE_TYPE {
-	case 1:
-		item.BACKDROP = TMDB_ORIGINAL + tv.BACKDROP_IMAGE_PATH
-	case 0:
-		item.BACKDROP = fmt.Sprintf(Config.Web.PublicUrl+"/image?type=tv&id=%d&image=backdrop", tv.TMDB_ID)
-	}
-	switch tv.POSTER_IMAGE_STORAGE_TYPE {
-	case 1:
-		item.POSTER = TMDB_ORIGINAL + tv.POSTER_IMAGE_PATH
-	case 0:
-		item.POSTER = fmt.Sprintf(Config.Web.PublicUrl+"/image?type=tv&id=%d&image=poster", tv.TMDB_ID)
-	}
-	switch tv.LOGO_IMAGE_STORAGE_TYPE {
-	case 1:
-		item.LOGO = TMDB_ORIGINAL + tv.LOGO_IMAGE_PATH
-	case 0:
-		item.LOGO = fmt.Sprintf(Config.Web.PublicUrl+"/image?type=tv&id=%d&image=logo", tv.TMDB_ID)
-	}
-
+	item.BACKDROP = tv.Backdrop("high")
+	item.POSTER = tv.Poster("high")
+	item.LOGO = tv.Logo("high")
 	return item
+}
+
+func (m *TV) GetPoster(quality string) ([]byte, error) {
+	return GetMinia(
+		m.POSTER_IMAGE_PATH,
+		int(m.ID),
+		"tv",
+		"poster",
+		quality,
+	)
+}
+func (m *TV) GetBackdrop(quality string) ([]byte, error) {
+	return GetMinia(
+		m.BACKDROP_IMAGE_PATH,
+		int(m.ID),
+		"tv",
+		"backdrop",
+		quality,
+	)
+}
+func (m *TV) GetLogo(quality string) ([]byte, error) {
+	return GetMinia(
+		m.LOGO_IMAGE_PATH,
+		int(m.ID),
+		"tv",
+		"logo",
+		quality,
+	)
 }
 
 func (tv *TV) Skinny(w *WATCHING) SKINNY_RENDER {
@@ -157,8 +164,8 @@ func (tv *TV) Skinny(w *WATCHING) SKINNY_RENDER {
 		ID:          "db@" + strconv.Itoa(int(tv.ID)),
 		TYPE:        "tv",
 		NAME:        tv.NAME,
-		POSTER:      URL + tv.POSTER_IMAGE_PATH,
-		BACKDROP:    URL + tv.BACKDROP_IMAGE_PATH,
+		POSTER:      tv.Poster("low"),
+		BACKDROP:    tv.Backdrop("low"),
 		WATCH:       w.WatchData(),
 		DESCRIPTION: tv.DESCRIPTION,
 		TRAILER:     tv.TRAILER_URL,
@@ -266,17 +273,15 @@ func (tv *TV) ToSeason() []SeasonItem {
 	return seasons
 }
 
-func (tv *TV) Backdrop(base string) string {
-	if tv.POSTER_IMAGE_STORAGE_TYPE != 2 {
-		return base + tv.POSTER_IMAGE_PATH
-	}
-	return ""
+func (tv *TV) Backdrop(quality string) string {
+	return fmt.Sprintf(Config.Web.PublicUrl+"/image?type=tv&id=db@%d&image=backdrop&quality="+quality, tv.ID)
 }
-func (tv *TV) Poster(base string) string {
-	if tv.POSTER_IMAGE_STORAGE_TYPE != 2 {
-		return base + tv.POSTER_IMAGE_PATH
-	}
-	return ""
+
+func (tv *TV) Poster(quality string) string {
+	return fmt.Sprintf(Config.Web.PublicUrl+"/image?type=tv&id=db@%d&image=poster&quality="+quality, tv.ID)
+}
+func (tv *TV) Logo(quality string) string {
+	return fmt.Sprintf(Config.Web.PublicUrl+"/image?type=tv&id=db@%d&image=logo&quality="+quality, tv.ID)
 }
 
 func GetSerieDb(db *gorm.DB, serie int, year string, InitIfNotExist bool, preload func() *gorm.DB) (*TV, error) {
@@ -313,7 +318,6 @@ func GetSerieDb(db *gorm.DB, serie int, year string, InitIfNotExist bool, preloa
 			VOTE:                        serieData.Vote_average,
 			PROVIDERS:                   ParseProvider(append(serieData.WatchProviders.Results.FR.Buy, serieData.WatchProviders.Results.FR.Rent...), db),
 			POSTER_IMAGE_PATH:           "",
-			POSTER_IMAGE_STORAGE_TYPE:   2,
 			RATED:                       serieData.Rated,
 			Director:                    serieData.Director,
 			Writer:                      serieData.Writer,
@@ -322,7 +326,6 @@ func GetSerieDb(db *gorm.DB, serie int, year string, InitIfNotExist bool, preloa
 			BACKDROP_IMAGE_PATH:         "",
 			BACKDROP_IMAGE_STORAGE_TYPE: 2,
 			LOGO_IMAGE_PATH:             "",
-			LOGO_IMAGE_STORAGE_TYPE:     2,
 			TRAILER_URL:                 "",
 		}
 		if trailers, err := kosmixutil.GetVideo(serieData.Video.Results); err == nil {
@@ -330,15 +333,12 @@ func GetSerieDb(db *gorm.DB, serie int, year string, InitIfNotExist bool, preloa
 		}
 		if logos, err := kosmixutil.GetImage(serieData.Images.Logo, kosmixutil.TMDB_IMAGE_LOGO_RATIO); err == nil {
 			serieInDb.LOGO_IMAGE_PATH = logos.FilePath
-			serieInDb.LOGO_IMAGE_STORAGE_TYPE = 1
 		}
 		if backdrops, err := kosmixutil.GetImage(serieData.Images.Backdrops, []float64{kosmixutil.TMDB_IMAGE_BACKDROP_RATIO}); err == nil {
 			serieInDb.BACKDROP_IMAGE_PATH = backdrops.FilePath
-			serieInDb.BACKDROP_IMAGE_STORAGE_TYPE = 1
 		}
 		if posters, err := kosmixutil.GetImage(serieData.Images.Posters, []float64{kosmixutil.TMDB_IMAGE_POSTER_RATIO}); err == nil {
 			serieInDb.POSTER_IMAGE_PATH = posters.FilePath
-			serieInDb.POSTER_IMAGE_STORAGE_TYPE = 1
 		}
 		db.Create(&serieInDb)
 		seasonNumbers := []int{}

@@ -60,7 +60,7 @@ func SearchController(db *gorm.DB, q string, specificType string, user *engine.U
 		var Movies []engine.MOVIE
 		user.SkinnyMoviePreloads().Where("name LIKE ?", "%"+q+"%").Find(&Movies)
 		for _, movie := range Movies {
-			elements = append(elements, movie.Skinny(movie.GetWatching(), nil))
+			elements = append(elements, movie.Skinny(movie.GetWatching()))
 		}
 	}
 	if slices.Contains(queryengine, engine.Tv) {

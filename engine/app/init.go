@@ -24,7 +24,6 @@ func GetDbConn() *gorm.DB {
 	case "mysql":
 		url := Config.DB.Username + ":" + Config.DB.Password + "@tcp(" + Config.DB.Host + ":" + Config.DB.Port + ")/" + Config.DB.Database + "?charset=utf8mb4&parseTime=True&loc=Local"
 		connector = mysql.Open(url)
-		break
 	default:
 		panic("Unknown database driver")
 	}

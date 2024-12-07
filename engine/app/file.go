@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/anacrolix/torrent"
@@ -179,8 +180,11 @@ func (f *FILE) Source() string {
 func (f *FILE) IsEpisode() bool {
 	return kosmixutil.GetType(f.FILENAME, f.SUB_PATH) == "episode"
 }
+
 func (f *FILE) GetTitle() string {
-	return kosmixutil.GetTitle(f.FILENAME)
+	regexConvert := regexp.MustCompile(`convert-[0-9]{2,4}-`)
+	b_ := regexConvert.ReplaceAll([]byte(f.FILENAME), []byte(""))
+	return kosmixutil.GetTitle(string(b_))
 }
 
 func (f *FILE) GetNonSeekableReader() io.ReadCloser {
@@ -330,7 +334,7 @@ func (f *FILE) LoadMedia(user *User) {
 func (f *FILE) SkinnyRender(user *User) SKINNY_RENDER {
 	f.LoadMedia(user)
 	if f.MOVIE_ID != 0 {
-		return f.MOVIE.Skinny(f.MOVIE.GetWatching(), nil)
+		return f.MOVIE.Skinny(f.MOVIE.GetWatching())
 	}
 	if f.TV_ID != 0 {
 		return f.TV.Skinny(f.TV.GetWatching())

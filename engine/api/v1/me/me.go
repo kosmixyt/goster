@@ -31,7 +31,7 @@ func HandleMe(db *gorm.DB, ctx *gin.Context) {
 			creq.Media_Type = engine.Tv
 			creq.Media_ID = request.TV.IdString()
 		} else {
-			creq.Render = request.Movie.Skinny(nil, nil)
+			creq.Render = request.Movie.Skinny(nil)
 			creq.Media_Name = request.Movie.NAME
 			creq.Media_Type = engine.Movie
 			creq.Media_ID = request.Movie.IdString()
@@ -104,7 +104,7 @@ func HandleMe(db *gorm.DB, ctx *gin.Context) {
 		} else {
 			for _, f := range torrentDbItem.FILES {
 				if f.MOVIE != nil && f.IS_MEDIA {
-					item.SKINNY = f.MOVIE.Skinny(nil, nil)
+					item.SKINNY = f.MOVIE.Skinny(nil)
 					break
 				}
 			}

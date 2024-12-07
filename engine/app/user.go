@@ -425,10 +425,18 @@ func GetRecent(db *gorm.DB, user User) *Line_Render {
 	}
 	renderers, _ := make([]SKINNY_RENDER, 0), TMDB_ORIGINAL
 	for _, m := range RecentMovies {
-		renderers = append(renderers, m.Skinny(m.GetWatching(), &TMDB_ORIGINAL))
+		ap := m.Skinny(m.GetWatching())
+		ap.BACKDROP = m.Backdrop("high")
+		ap.LOGO = m.Logo("high")
+		ap.POSTER = m.Poster("high")
+		renderers = append(renderers, ap)
 	}
 	for _, t := range RecentTVs {
-		renderers = append(renderers, t.Skinny(nil))
+		ap := t.Skinny(nil)
+		ap.BACKDROP = t.Backdrop("high")
+		ap.LOGO = t.Logo("high")
+		ap.POSTER = t.Poster("high")
+		renderers = append(renderers)
 	}
 	return &Line_Render{
 		Data:  renderers,

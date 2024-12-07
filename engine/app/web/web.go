@@ -15,6 +15,7 @@ import (
 	"kosmix.fr/streaming/engine/api/v1/browse"
 	"kosmix.fr/streaming/engine/api/v1/dlrequest"
 	"kosmix.fr/streaming/engine/api/v1/download"
+	"kosmix.fr/streaming/engine/api/v1/image"
 	"kosmix.fr/streaming/engine/api/v1/iptv"
 	"kosmix.fr/streaming/engine/api/v1/landing"
 	"kosmix.fr/streaming/engine/api/v1/me"
@@ -59,6 +60,7 @@ func WebServer(db *gorm.DB, port string) {
 	r.POST("/api/metadata/update", func(ctx *gin.Context) { metadata.AssignFileToMedia(ctx, db) })
 	r.GET("/api/metadata/clean", func(ctx *gin.Context) { metadata.ClearMoviesWithNoMediaAndNoTmdbId(ctx, db) })
 	r.GET("/api/metadata/items", func(ctx *gin.Context) { metadata.GetUnAssignedMedias(ctx, db) })
+	r.GET("/api/image", func(ctx *gin.Context) { image.HandlePoster(ctx, db) })
 	// to patch
 	r.GET("/api/trailer", func(ctx *gin.Context) { trailer.HandleTrailerRequest(ctx, db) })
 	r.GET("/api/download", func(ctx *gin.Context) { download.DownloadItem(ctx, db) })

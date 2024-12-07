@@ -40,14 +40,11 @@ type MOVIE struct {
 	TAGLINE             string     `gorm:"not null"`
 	BACKDROP_IMAGE_PATH string     `gorm:"not null"`
 	// 1 = tmdb, 0 = local path, 2 = null
-	BACKDROP_IMAGE_STORAGE_TYPE int    `gorm:"not null"`
-	POSTER_IMAGE_PATH           string `gorm:"not null"`
+	POSTER_IMAGE_PATH string `gorm:"not null"`
 	// 1 = tmdb, 0 = local path, 2 = null
-	POSTER_IMAGE_STORAGE_TYPE int `gorm:"not null"`
 
 	LOGO_IMAGE_PATH string `gorm:"not null"`
 	// 1 = tmdb, 0 = local path, 2 = null
-	LOGO_IMAGE_STORAGE_TYPE int `gorm:"not null"`
 	// empty if no video trailer
 	TRAILER_URL string             `gorm:"not null"`
 	WATCHLISTS  []User             `gorm:"many2many:watch_list_movies;"`
@@ -135,30 +132,57 @@ func (MOVIE) GetMaxSize() int64 {
 	return GetMaxSize(Movie)
 }
 
+// UPDATE movies SET `backdrop_image_storage_type` = 1 WHERE `backdrop_image_storage_type` = 0
+// UPDATE movies SET `poster_image_storage_type` = 1 WHERE `poster_image_storage_type` = 0
+func (m *MOVIE) GetPoster(quality string) ([]byte, error) {
+	return GetMinia(
+		m.POSTER_IMAGE_PATH,
+		int(m.ID),
+		Movie,
+		"poster",
+		quality,
+	)
+}
+func (m *MOVIE) GetBackdrop(quality string) ([]byte, error) {
+	return GetMinia(
+		m.BACKDROP_IMAGE_PATH,
+		int(m.ID),
+		Movie,
+		"backdrop",
+		quality,
+	)
+}
+func (m *MOVIE) GetLogo(quality string) ([]byte, error) {
+	return GetMinia(
+		m.LOGO_IMAGE_PATH,
+		int(m.ID),
+		Movie,
+		"logo",
+		quality,
+	)
+}
+
 func emptyMovie(name string, year int) *MOVIE {
 	return &MOVIE{
-		NAME:                        name,
-		YEAR:                        year,
-		TMDB_ID:                     -1,
-		FILES:                       []FILE{},
-		DESCRIPTION:                 "",
-		RUNTIME:                     "0",
-		ORIGINAL_NAME:               "",
-		DOWNLOAD:                    0,
-		STREAMING:                   0,
-		VIEW:                        0,
-		PROVIDERS:                   []PROVIDER{},
-		TRAILER_URL:                 "",
-		WATCHLISTS:                  []User{},
-		WATCHING:                    []WATCHING{},
-		KEYWORDS:                    []KEYWORD{},
-		GENRE:                       []GENRE{},
-		BACKDROP_IMAGE_PATH:         "",
-		BACKDROP_IMAGE_STORAGE_TYPE: 2,
-		LOGO_IMAGE_PATH:             "",
-		LOGO_IMAGE_STORAGE_TYPE:     2,
-		POSTER_IMAGE_PATH:           "",
-		POSTER_IMAGE_STORAGE_TYPE:   2,
+		NAME:                name,
+		YEAR:                year,
+		TMDB_ID:             -1,
+		FILES:               []FILE{},
+		DESCRIPTION:         "",
+		RUNTIME:             "0",
+		ORIGINAL_NAME:       "",
+		DOWNLOAD:            0,
+		STREAMING:           0,
+		VIEW:                0,
+		PROVIDERS:           []PROVIDER{},
+		TRAILER_URL:         "",
+		WATCHLISTS:          []User{},
+		WATCHING:            []WATCHING{},
+		KEYWORDS:            []KEYWORD{},
+		GENRE:               []GENRE{},
+		BACKDROP_IMAGE_PATH: "",
+		LOGO_IMAGE_PATH:     "",
+		POSTER_IMAGE_PATH:   "",
 	}
 
 }
@@ -202,46 +226,19 @@ func (movie *MOVIE) Render(user *User) MovieItem {
 			item.WATCH = WatchData{TOTAL: movie.FILES[0].WATCHING[0].CURRENT, CURRENT: movie.FILES[0].WATCHING[0].TOTAL}
 		}
 	}
-	switch movie.LOGO_IMAGE_STORAGE_TYPE {
-	case 1:
-		item.LOGO = TMDB_ORIGINAL + movie.LOGO_IMAGE_PATH
-	case 0:
-		item.LOGO = fmt.Sprintf(Config.Web.PublicUrl+"/image?type=movie&id=%d&image=logo", movie.TMDB_ID)
-	}
-	switch movie.BACKDROP_IMAGE_STORAGE_TYPE {
-
-	case 1:
-		item.BACKDROP = TMDB_ORIGINAL + movie.BACKDROP_IMAGE_PATH
-
-	case 0:
-		item.BACKDROP = fmt.Sprintf(Config.Web.PublicUrl+"/image?type=movie&id=%d&image=backdrop", movie.TMDB_ID)
-
-	}
-	switch movie.POSTER_IMAGE_STORAGE_TYPE {
-
-	case 1:
-		item.POSTER = TMDB_ORIGINAL + movie.POSTER_IMAGE_PATH
-
-	case 0:
-		item.POSTER = fmt.Sprintf(Config.Web.PublicUrl+"/image?type=movie&id=%d&image=poster", movie.TMDB_ID)
-
-	}
+	item.LOGO = movie.Logo("high")
+	item.BACKDROP = movie.Backdrop("high")
+	item.POSTER = movie.Poster("high")
 	return item
 }
 
-func (movie *MOVIE) Skinny(w *WATCHING, base_url *string) SKINNY_RENDER {
-	var URL string
-	if base_url != nil {
-		URL = *base_url
-	} else {
-		URL = TMDB_LOW
-	}
+func (movie *MOVIE) Skinny(w *WATCHING) SKINNY_RENDER {
 	render := SKINNY_RENDER{
 		ID:          "db@" + strconv.Itoa(int(movie.ID)),
 		TYPE:        "movie",
 		NAME:        movie.NAME,
-		POSTER:      URL + movie.POSTER_IMAGE_PATH,
-		BACKDROP:    URL + movie.BACKDROP_IMAGE_PATH,
+		POSTER:      movie.Poster("low"),
+		BACKDROP:    movie.Backdrop("low"),
 		DESCRIPTION: movie.DESCRIPTION,
 		YEAR:        movie.YEAR,
 		RUNTIME:     movie.RUNTIME,
@@ -250,7 +247,7 @@ func (movie *MOVIE) Skinny(w *WATCHING, base_url *string) SKINNY_RENDER {
 		WATCH:       w.WatchData(),
 		GENRE:       ParseGenreItem(movie.GENRE),
 		PROVIDERS:   ParseProviderItem(movie.PROVIDERS),
-		LOGO:        URL + movie.LOGO_IMAGE_PATH,
+		LOGO:        TMDB_LOW + movie.LOGO_IMAGE_PATH,
 	}
 	if w != nil {
 		render.TRANSCODE_URL = fmt.Sprintf(Config.Web.PublicUrl+"/transcode?type=movie&id=db@%d", movie.ID)
@@ -268,7 +265,7 @@ func (movie *MOVIE) GetWatching() *WATCHING {
 func MapMovieSkinny(movies []MOVIE) []SKINNY_RENDER {
 	render := make([]SKINNY_RENDER, 0)
 	for _, m := range movies {
-		render = append(render, m.Skinny(m.GetWatching(), nil))
+		render = append(render, m.Skinny(m.GetWatching()))
 	}
 	return render
 }
@@ -320,17 +317,14 @@ func (movie *MOVIE) ToFile() []FileItem {
 	return files
 }
 
-func (movie *MOVIE) Backdrop(base string) string {
-	if movie.POSTER_IMAGE_STORAGE_TYPE != 2 {
-		return base + movie.POSTER_IMAGE_PATH
-	}
-	return ""
+func (movie *MOVIE) Backdrop(quality string) string {
+	return fmt.Sprintf(Config.Web.PublicUrl+"/image?type=movie&id=db@%d&image=backdrop&quality=%s", movie.ID, quality)
 }
-func (movie *MOVIE) Poster(base string) string {
-	if movie.POSTER_IMAGE_STORAGE_TYPE != 2 {
-		return base + movie.POSTER_IMAGE_PATH
-	}
-	return ""
+func (movie *MOVIE) Poster(quality string) string {
+	return fmt.Sprintf(Config.Web.PublicUrl+"/image?type=movie&id=db@%d&image=poster&quality=%s", movie.ID, quality)
+}
+func (movie *MOVIE) Logo(quality string) string {
+	return fmt.Sprintf(Config.Web.PublicUrl+"/image?type=movie&id=db@%d&image=logo&quality=%s", movie.ID, quality)
 }
 
 func InsertMovieInDb(db *gorm.DB, movie int, year int64, InsertIfNotExist bool, preload func() *gorm.DB) (*MOVIE, error) {
@@ -355,50 +349,44 @@ func InsertMovieInDb(db *gorm.DB, movie int, year int64, InsertIfNotExist bool, 
 			panic(err)
 		}
 		movieInDb = MOVIE{
-			DOWNLOAD:                    0,
-			STREAMING:                   0,
-			Origin_country:              movieData.Original_language,
-			BUDGET:                      strconv.Itoa(movieData.Budget),
-			TAGLINE:                     movieData.Tagline,
-			AGE_LIMIT:                   movieData.Rated,
-			AWARDS:                      movieData.Awards,
-			DIRECTOR:                    movieData.Director,
-			Director:                    movieData.Director,
-			Writer:                      movieData.Writer,
-			Vote_average:                movieData.Vote_average,
-			TMDB_ID:                     movie,
-			ORIGINAL_NAME:               movieData.Original_title,
-			DESCRIPTION:                 movieData.Overview,
-			RUNTIME:                     movieData.Runtime,
-			VIEW:                        0,
-			NAME:                        movieData.Title,
-			YEAR:                        nyear,
-			PROVIDERS:                   ParseProvider(append(movieData.WatchProviders.Results.FR.Buy, movieData.WatchProviders.Results.FR.Rent...), db),
-			FILES:                       []FILE{},
-			GENRE:                       ParseGenre(movieData.Genres, db),
-			BACKDROP_IMAGE_PATH:         "",
-			BACKDROP_IMAGE_STORAGE_TYPE: 2,
+			DOWNLOAD:            0,
+			STREAMING:           0,
+			Origin_country:      movieData.Original_language,
+			BUDGET:              strconv.Itoa(movieData.Budget),
+			TAGLINE:             movieData.Tagline,
+			AGE_LIMIT:           movieData.Rated,
+			AWARDS:              movieData.Awards,
+			DIRECTOR:            movieData.Director,
+			Director:            movieData.Director,
+			Writer:              movieData.Writer,
+			Vote_average:        movieData.Vote_average,
+			TMDB_ID:             movie,
+			ORIGINAL_NAME:       movieData.Original_title,
+			DESCRIPTION:         movieData.Overview,
+			RUNTIME:             movieData.Runtime,
+			VIEW:                0,
+			NAME:                movieData.Title,
+			YEAR:                nyear,
+			PROVIDERS:           ParseProvider(append(movieData.WatchProviders.Results.FR.Buy, movieData.WatchProviders.Results.FR.Rent...), db),
+			FILES:               []FILE{},
+			GENRE:               ParseGenre(movieData.Genres, db),
+			BACKDROP_IMAGE_PATH: "",
 
-			POSTER_IMAGE_PATH:         "",
-			POSTER_IMAGE_STORAGE_TYPE: 2,
-			LOGO_IMAGE_PATH:           "",
-			TRAILER_URL:               "",
-			LOGO_IMAGE_STORAGE_TYPE:   2,
+			POSTER_IMAGE_PATH: "",
+			LOGO_IMAGE_PATH:   "",
+			TRAILER_URL:       "",
 		}
 		if logos, err := kosmixutil.GetImage(movieData.Images.Logo, kosmixutil.TMDB_IMAGE_LOGO_RATIO); err == nil {
 			movieInDb.LOGO_IMAGE_PATH = logos.FilePath
-			movieInDb.LOGO_IMAGE_STORAGE_TYPE = 1
 		}
 		if trailers, err := kosmixutil.GetVideo(movieData.Videos.Results); err == nil {
 			movieInDb.TRAILER_URL = "https://youtube.com/watch?v=" + trailers.Key
 		}
 		if posters, err := kosmixutil.GetImage(movieData.Images.Posters, []float64{kosmixutil.TMDB_IMAGE_POSTER_RATIO}); err == nil {
 			movieInDb.POSTER_IMAGE_PATH = posters.FilePath
-			movieInDb.POSTER_IMAGE_STORAGE_TYPE = 1
 		}
 		if backdrops, err := kosmixutil.GetImage(movieData.Images.Backdrops, []float64{kosmixutil.TMDB_IMAGE_BACKDROP_RATIO}); err == nil {
 			movieInDb.BACKDROP_IMAGE_PATH = backdrops.FilePath
-			movieInDb.BACKDROP_IMAGE_STORAGE_TYPE = 1
 		}
 		preload().Create(&movieInDb)
 	}

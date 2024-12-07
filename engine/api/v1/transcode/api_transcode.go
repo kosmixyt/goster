@@ -209,13 +209,13 @@ func NewTranscoder(app *gin.Engine, ctx *gin.Context, db *gorm.DB) {
 	}
 	if WatchingItem.MOVIE_ID != 0 {
 		res.Name = WatchingItem.MOVIE.NAME
-		res.Poster = WatchingItem.MOVIE.Poster(engine.TMDB_ORIGINAL)
-		res.Backdrop = WatchingItem.MOVIE.Backdrop(engine.TMDB_ORIGINAL)
+		res.Poster = WatchingItem.MOVIE.Poster("high")
+		res.Backdrop = WatchingItem.MOVIE.Backdrop("high")
 	} else {
 		res.Seasons = WatchingItem.TV.ToSeason()
 		res.Name = WatchingItem.TV.NAME + " " + WatchingItem.EPISODE.SEASON.GetNumberAsString(true) + " " + WatchingItem.EPISODE.GetNumberAsString(true)
-		res.Poster = WatchingItem.TV.Poster(engine.TMDB_ORIGINAL)
-		res.Backdrop = WatchingItem.TV.Backdrop(engine.TMDB_ORIGINAL)
+		res.Poster = WatchingItem.TV.Poster("high")
+		res.Backdrop = WatchingItem.TV.Backdrop("high")
 	}
 	b, err := json.Marshal(res)
 	if err != nil {

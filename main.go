@@ -8,7 +8,6 @@ import (
 )
 
 func main() {
-
 	engine.LoadConfig()
 	db := engine.Init()
 	if db == nil {

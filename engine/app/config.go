@@ -24,7 +24,7 @@ const TMDB_LOW string = "https://image.tmdb.org/t/p/w500/"
 
 var TMDB_ORIGINAL string = "https://image.tmdb.org/t/p/original/"
 
-var IPTV_IMG_PATH string
+var IMG_PATH string
 var IPTV_M3U8_PATH string
 var FILES_TORRENT_PATH string
 var HLS_OUTPUT_PATH string
@@ -38,14 +38,14 @@ func SetupCachePaths(cache_path string) {
 	if err != nil {
 		panic(err)
 	}
-	IPTV_IMG_PATH = Joins(abs, "iptv_imgs")
+	IMG_PATH = Joins(abs, "imgs")
 	IPTV_M3U8_PATH = Joins(abs, "iptv")
 	FILES_TORRENT_PATH = Joins(abs, "torrents")
 	HLS_OUTPUT_PATH = Joins(abs, "hls")
 	TRAILER_OUTPUT_PATH = Joins(abs, "trailer")
 	FFMPEG_BIG_FILE_PATH = Joins(abs, "ffmpeg")
 	PanicOnError(os.MkdirAll(cache_path, os.ModePerm))
-	PanicOnError(os.MkdirAll(IPTV_IMG_PATH, os.ModePerm))
+	PanicOnError(os.MkdirAll(IMG_PATH, os.ModePerm))
 	PanicOnError(os.MkdirAll(IPTV_M3U8_PATH, os.ModePerm))
 	PanicOnError(os.MkdirAll(FILES_TORRENT_PATH, os.ModePerm))
 	PanicOnError(os.MkdirAll(HLS_OUTPUT_PATH, os.ModePerm))

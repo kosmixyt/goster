@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -15,6 +16,7 @@ var API_KEY string
 var OMDB_API_KEY string
 
 const API_URL = "https://api.themoviedb.org/3"
+const TMDB_IMAGE_URL = "https://image.tmdb.org/t/p/original"
 
 const TMDB_IMAGE_BACKDROP_RATIO = 1.778
 const TMDB_IMAGE_POSTER_RATIO = 0.667
@@ -29,6 +31,19 @@ func InitKeys(tmdb_api_key string, omdb_api_key string, languages []string, lang
 	OMDB_API_KEY = omdb_api_key
 	TMDB_IMAGE_PREFERED_LANGUAGE = languages
 	SHORT_LANGUAGE = lang
+}
+func DownloadImage(base_path string, path string) (io.Reader, error) {
+	url := base_path + path
+	resp, err := http.Get(url)
+	fmt.Println(url)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != 200 {
+		return nil, errors.New("Error getting poster")
+	}
+
+	return resp.Body, nil
 }
 
 func SearchForSerie(name string, year string) (TMDB_SEARCH_SERIE, error) {

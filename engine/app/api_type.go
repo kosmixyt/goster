@@ -2,6 +2,9 @@ package engine
 
 import (
 	"fmt"
+	"io"
+	"os"
+	"slices"
 	"strconv"
 	"time"
 
@@ -143,4 +146,54 @@ func SortEpisodeByNumber(from []*EPISODE) []*EPISODE {
 		}
 	}
 	return from
+}
+
+func GetMinia(poster_image_path string, source_id int, source_type string, wantedImageType string, quality string) ([]byte, error) {
+	if !slices.Contains([]string{"poster", "backdrop", "logo"}, wantedImageType) {
+		return nil, fmt.Errorf("invalid image type")
+	}
+	if !slices.Contains([]string{"low", "high"}, quality) {
+		return nil, fmt.Errorf("invalid quality")
+	}
+	var base_url string
+	switch quality {
+	case "low":
+		base_url = TMDB_LOW
+	case "high":
+		base_url = TMDB_HIGH
+	}
+	path := Joins(IMG_PATH, source_type+"_"+strconv.Itoa(int(source_id))+"_"+quality+"_"+wantedImageType+".png")
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+
+		read, err := kosmixutil.DownloadImage(base_url, poster_image_path)
+		if err != nil {
+			return nil, err
+		}
+		fullPoster, err := io.ReadAll(read)
+		if err != nil {
+			return nil, err
+		}
+		file, err := os.Create(path)
+		if err != nil {
+			return nil, err
+		}
+		defer file.Close()
+		// _, err = io.Copy(file, read)
+		file.Write(fullPoster)
+		if err != nil {
+			return nil, err
+		}
+		return fullPoster, nil
+	} else {
+		file, err := os.Open(path)
+		if err != nil {
+			return nil, err
+		}
+		fullpst, err := io.ReadAll(file)
+		if err != nil {
+			return nil, err
+		}
+		return fullpst, nil
+	}
+
 }

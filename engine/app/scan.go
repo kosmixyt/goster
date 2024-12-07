@@ -102,7 +102,6 @@ func Scan(locations []StorageElement, db *gorm.DB) {
 		}
 		var fileInDb FILE
 		isVideoFile := kosmixutil.IsVideoFile(file.FileName)
-		fmt.Println("is video file", isVideoFile, file.FileName)
 		if err := db.Preload("STORAGE").Where("filename = ? AND storage_id = ? AND sub_path = ? AND root_path = ? AND is_media = ?", file.FileName, file.StorerDbId, file.Path, file.ROOT_PATH, isVideoFile).First(&fileInDb).Error; err != nil {
 			fileInDb = FILE{
 				FILENAME:  file.FileName,
@@ -196,7 +195,6 @@ func Scan(locations []StorageElement, db *gorm.DB) {
 			tonotDelete = append(tonotDelete, fileInDb.ID)
 		}
 	}
-	os.Exit(100)
 	queryTime := time.Now()
 	fmt.Println("Query time: Insert", time.Since(queryTime))
 	DeleteFilesInDb(tonotDelete, db)

@@ -46,7 +46,7 @@ func LogoController(user *engine.User, iptv_id string, channel_id string, db *go
 	}
 	url := channel.Logo_url
 	name := base64.StdEncoding.EncodeToString([]byte(channel.Name))
-	finalFilename := engine.Joins(engine.IPTV_IMG_PATH, name+".png")
+	finalFilename := engine.Joins(engine.IMG_PATH, name+".png")
 	if _, err := os.Stat(finalFilename); errors.Is(err, os.ErrNotExist) {
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {

@@ -35,7 +35,7 @@ func Browser(db *gorm.DB, user *engine.User, genre string, itype string, provide
 		elements := []engine.SKINNY_RENDER{}
 		if itype == "movie" || itype == "" {
 			for _, movie := range Genre.MOVIES {
-				elements = append(elements, movie.Skinny(movie.GetWatching(), nil))
+				elements = append(elements, movie.Skinny(movie.GetWatching()))
 			}
 		}
 		if itype == "tv" || itype == "" {
@@ -52,7 +52,7 @@ func Browser(db *gorm.DB, user *engine.User, genre string, itype string, provide
 		}
 		elements := []engine.SKINNY_RENDER{}
 		for _, movie := range movies {
-			elements = append(elements, movie.Skinny(movie.GetWatching(), nil))
+			elements = append(elements, movie.Skinny(movie.GetWatching()))
 		}
 		return elements, nil
 	}
@@ -87,7 +87,7 @@ func Browser(db *gorm.DB, user *engine.User, genre string, itype string, provide
 			elements = append(elements, tv.Skinny(tv.GetWatching()))
 		}
 		for _, movie := range movies {
-			elements = append(elements, movie.Skinny(movie.GetWatching(), nil))
+			elements = append(elements, movie.Skinny(movie.GetWatching()))
 		}
 		return elements, nil
 	}
