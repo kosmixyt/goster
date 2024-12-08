@@ -35,13 +35,15 @@
 - Sharewood account
 - Omdb Api key [GET](https://www.omdbapi.com/apikey.aspx)
 
-## Quick Setup
+## config.json Setup
 
 - Rename config.sample.json to config.json
-- Provide you scan_paths (where your (movies/tv shows are located))
-  2 types of scan_paths : - Sftp
-  ```
-  {
+- Edit config.json as you wont, 2driver type : mysq,sqlite
+
+```
+{
+  "scan_paths": [
+    {
       "name": "homelab",
       "type": "sftp",
       "options": {
@@ -49,52 +51,96 @@
         "port": "22",
         "user": "username",
         "pass": "password",
-        "path": ["/DATA/DOWNLOADS/movie/", "/DATA/DOWNLOADS/serie/"]
+        "path": [
+          "/DATA/DOWNLOADS/movie/",
+          "/DATA/DOWNLOADS/serie/"
+        ]
       }
-    }
-  ```
-  - Local
-  ```
-  {
-      "name": "local example",
+    },
+    {
+      "name": "local storage",
       "type": "local",
       "options": {
-        "path": ["/path/to/media/movies/", "/path/to/media/serie"]
+        "path": [
+          "/path/to/movie",
+          "/path/to/serie"
+        ]
       }
+    }
+  ],
+  "db": {
+    "driver": "sqlite",
+    "host": "",
+    "port": "",
+    "username": "",
+    "password": "",
+    "database": "./db/streaming.db"
+  },
+  "cert": {
+    "key": "",
+    "cert": ""
+  },
+  "limits": {
+    "check_interval": 24,
+    "movie_size": 5368709120,
+    "season_size": 21474836480
+  },
+  "transcoder": {
+    "ffmpeg": "/usr/bin/ffmpeg",
+    "ffprobe": "/usr/bin/ffprobe"
+  },
+  "torrents": {
+    "download_path": "/app/dl/"
+  },
+  "web": {
+    "public_url": "/api",
+    "public_port": "80",
+    "cross_origin": "http://localhost:3000"
+  },
+  "cache_path": "/app/cache/",
+  "metadata": {
+    "tmdb": "",
+    "tmdb_iso3166": "FR",
+    "tmdb_movie_watch_providers": {
+      "Netflix": 8,
+      "Disney Plus": 337,
+      "Amazon Prime Video": 119,
+      "Apple Tv Plus": 350,
+      "Canal +": 381,
+      "Google Play Movies": 3,
+      "Filmo TV": 138,
+      "Amazon Video": 10
+    },
+    "tmdb_tv_watch_providers": {},
+    "omdb": "",
+    "tmdb_lang": "fr",
+    "tmdb_lang_imgs": [
+      "fr",
+      "en",
+      "null"
+    ]
+  },
+  "cloudflare": {
+    "challenge_resolver": "puppeteer",
+    "flaresolverr_url": "",
+    "capsolverr_proxy_url": "",
+    "capsolverr_api_key": ""
+  },
+  "torrent_providers": {
+    "sharewood": {
+      "key": "",
+      "username": "",
+      "password": ""
+    },
+    "ygg": {
+      "username": "",
+      "password": ""
+    }
   }
-  ```
-- Provide Your database Credentials
-  - 2 types of database storage
-    Mysql:
-  ```
-  "db":
-  {
-  "driver": "mysql",
-  "host": "localhost",
-  "port": "3306",
-  "username": "root",
-  "password": "",
-  "database": "streaming",
-  }
-  ```
-  Sqlite:
-  ```
-  "db":
-  {
-  "driver": "sqlite",
-  "database": "streaming.db"
-  }
-  ```
-- If you have ssl enter your ssl absolute path
-- Provide ffmpeg and ffprobe path in .transcoder
-- give the absolute path of the folder where you want goster to store temporary files (<10gb)
-- give the absolute path (local!!!) where you want goster to store the downloaded torrents (a fast disk).
-- Set your tmdb api key in metadata.tmdb
-- Set your iso3166 language in metadata.tmdb_iso3166
-- If you have omdb api key set it in metadata.omdb
-- Set your short language id in metadata.tmdb_lang
-- If you have an ygg account provide credentials in torrent_providers.ygg
-- If you have an sharewood account provide credentials in torrent_providers.sharewood
+}
+
+```
+
 - Run bin.exe|bin
 - Wait 1/2min (check console) and go to http://localhost
 

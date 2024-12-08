@@ -186,7 +186,6 @@ func (tv *TV) Similars(preload func() *gorm.DB, max int) []TV {
 	preload().
 		Joins("JOIN tv_genres ON tvs.id = tv_genres.tv_id").
 		Where("tv_genres.genre_id IN (?)", tv.GenreIds()).
-		Order("RAND()").
 		Limit(max).
 		Find(&tvs)
 	return tvs

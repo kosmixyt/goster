@@ -67,13 +67,13 @@ func GetGenreRecommendation(watching *[]WATCHING, db *gorm.DB, preloadMovie []st
 		defer wg.Done()
 		movies, tvs, render := make([]MOVIE, 0), make([]TV, 0), make([]SKINNY_RENDER, 0)
 		if bg.ItemType == "movie" {
-			req := db.Table("movies").Joins("INNER JOIN movie_genres ON movies.id = movie_genres.movie_id").Where("movie_genres.genre_id = ?", bg.Genre.ID).Preload("WATCHING", "USER_ID = ? ", user.ID).Preload("PROVIDERS").Preload("WATCHLISTS", "id = ? ", user.ID).Limit(50).Order("RAND()")
+			req := db.Table("movies").Joins("INNER JOIN movie_genres ON movies.id = movie_genres.movie_id").Where("movie_genres.genre_id = ?", bg.Genre.ID).Preload("WATCHING", "USER_ID = ? ", user.ID).Preload("PROVIDERS").Preload("WATCHLISTS", "id = ? ", user.ID).Limit(50)
 			for _, p := range preloadMovie {
 				req = req.Preload(p)
 			}
 			req.Find(&movies)
 		} else {
-			req := db.Table("tvs").Joins("INNER JOIN tv_genres ON tvs.id = tv_genres.tv_id").Where("tv_genres.genre_id = ?", bg.Genre.ID).Preload("WATCHING", "USER_ID = ? ", user.ID).Preload("PROVIDERS").Preload("WATCHLISTS", "id = ? ", user.ID).Limit(50).Order("RAND()")
+			req := db.Table("tvs").Joins("INNER JOIN tv_genres ON tvs.id = tv_genres.tv_id").Where("tv_genres.genre_id = ?", bg.Genre.ID).Preload("WATCHING", "USER_ID = ? ", user.ID).Preload("PROVIDERS").Preload("WATCHLISTS", "id = ? ", user.ID).Limit(50)
 			for _, p := range preloadTv {
 				req = req.Preload(p)
 			}

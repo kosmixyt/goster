@@ -284,7 +284,6 @@ func (m *MOVIE) SimilarMovies(preloads func() *gorm.DB, max int) []MOVIE {
 		Joins("JOIN movie_genres ON movies.id = movie_genres.movie_id").
 		Where("movie_genres.genre_id IN (?)", m.GenreIds()).
 		Where("movies.id != ?", m.ID).
-		Order("RAND()").
 		Limit(-1).
 		Find(&movies)
 	return movies

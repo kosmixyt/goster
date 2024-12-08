@@ -18,7 +18,7 @@
     "port": "",
     "username": "",
     "password": "",
-    "database": "streaming.db"
+    "database": "./db/streaming.db"
   },
   "cert": { "key": "", "cert": "" },
   "limits": {

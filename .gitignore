@@ -23,3 +23,5 @@ bfg-1.14.0.jar
 replace.txt
 bin.exe
 files.txt
+configdocker.json
+docker/db/streaming.db

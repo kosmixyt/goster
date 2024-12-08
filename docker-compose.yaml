@@ -1,12 +1,13 @@
 services:
   app:
-    image: goapp
+    image: goapp:latest
     ports:
-      - "80:80" # Pour l'application Go
+      - "9090:80" # Pour l'application Go
     volumes:
-      - ./config.json:/app/config.json # Point de montage pour le cache
-      - ./cache/:/app/cache/ # Point de montage pour le cache
-      - ./dl/:/app/dl/ # Point de montage pour les téléchargements
+      - ./configdocker.json:/app/config.json # Point de montage pour le cache
+      - ./docker/cache/:/app/cache/ # Point de montage pour le cache
+      - ./docker/dl/:/app/dl/ # Point de montage pour les téléchargements
+      - ./docker/db/:/app/db # Point de montage pour la base de données
     networks:
       - private_network
 networks:
