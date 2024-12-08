@@ -276,6 +276,35 @@ func (tv *TV) Poster(quality string) string {
 func (tv *TV) Logo(quality string) string {
 	return fmt.Sprintf(Config.Web.PublicUrl+"/image?type=tv&id=db@%d&image=logo&quality="+quality, tv.ID)
 }
+func LoadSeasonEpisodesAndFiles(db *gorm.DB, tv *TV) {
+	db.Preload("SEASON.EPISODES").Preload("SEASON.EPISODES.FILES").Find(&tv)
+}
+
+func (tv *TV) MoveFiles(serie *TV) error {
+	return db.Transaction(func(tx *gorm.DB) error {
+		for _, season := range tv.SEASON {
+			for _, episode := range season.EPISODES {
+				if season.HasFile() {
+					seasonOnNewSerie := serie.GetSeason(season.NUMBER, true)
+					for _, file := range episode.FILES {
+						if episode.HasFile(nil) {
+							episodeOnNewSeries := seasonOnNewSerie.GetEpisode(episode.NUMBER, true)
+							if err := tx.Model(&file).Updates(FILE{
+								TV_ID:      serie.ID,
+								SEASON_ID:  seasonOnNewSerie.ID,
+								EPISODE_ID: episodeOnNewSeries.ID,
+							}).Error; err != nil {
+								return err
+							}
+
+						}
+					}
+				}
+			}
+		}
+		return nil
+	})
+}
 
 func GetSerieDb(db *gorm.DB, serie int, year string, InitIfNotExist bool, preload func() *gorm.DB) (*TV, error) {
 	insertItemMutex.Lock()

@@ -1,6 +1,8 @@
 package kosmixutil
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -222,4 +224,13 @@ func FormatFilenameForContentDisposition(filename string) string {
 	filename = url.QueryEscape(filename)
 
 	return filename
+}
+
+func GenerateRandomKey(size int) string {
+	b := make([]byte, size)
+	_, err := rand.Read(b)
+	if err != nil {
+		panic(err)
+	}
+	return base64.StdEncoding.EncodeToString(b)
 }

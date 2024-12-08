@@ -60,7 +60,7 @@ func (s *SftpStorage) Init(name string, channel chan error, props interface{}) {
 	// fmt.Println("Connected to sftp", data.User, data.Pass)
 	sftpClient, err := sftp.NewClient(client)
 	if err != nil {
-		channel <- err
+		channel <- errors.New("cannot create sftp client verify your credentials")
 	}
 	s.sftpClient = sftpClient
 

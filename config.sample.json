@@ -10,37 +10,30 @@
         "pass": "password",
         "path": ["/DATA/DOWNLOADS/movie/", "/DATA/DOWNLOADS/serie/"]
       }
-    },
-
-    {
-      "name": "seedhost",
-      "type": "sftp",
-      "options": {
-        "host": "seedbox",
-        "port": "22",
-        "user": "username",
-        "pass": "password",
-        "path": ["/path/to/media/movies/", "/path/to/media/serie"]
-      }
     }
   ],
-  "db": { 
-    "driver": "mysql",
-    "host": "localhost", "port": "3306", "username": "root", "password": "", "database": "streaming" },
-  "cert": { "key": "/app/assets/ssl/privkey.pem", "cert": "/app/assets/ssl/fullchain.pem" },
+  "db": {
+    "driver": "sqlite",
+    "host": "",
+    "port": "",
+    "username": "",
+    "password": "",
+    "database": "streaming.db"
+  },
+  "cert": { "key": "", "cert": "" },
   "limits": {
     "check_interval": 24,
     "movie_size": 5368709120,
     "season_size": 21474836480
   },
   "transcoder": { "ffmpeg": "/usr/bin/ffmpeg", "ffprobe": "/usr/bin/ffprobe" },
-  "torrents": { "download_path": "/homelab/dl/" },
+  "torrents": { "download_path": "/app/dl/" },
   "web": {
     "public_url": "/api",
-    "public_port": "443",
+    "public_port": "80",
     "cross_origin": "http://localhost:3000"
   },
-  "cache_path": "/app/assets/cache/",
+  "cache_path": "/app/cache/",
   "metadata": {
     "tmdb": "",
     "tmdb_iso3166": "FR",
@@ -61,7 +54,7 @@
   },
   "cloudflare": {
     "challenge_resolver": "puppeteer",
-    "flaresolverr_url": "http://192.168.1.1:12845/v1",
+    "flaresolverr_url": "",
     "capsolverr_proxy_url": "",
     "capsolverr_api_key": ""
   },

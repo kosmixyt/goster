@@ -70,7 +70,7 @@ func Init() *gorm.DB {
 	admin := &User{
 		NAME:                  "admin",
 		EMAIL:                 "",
-		TOKEN:                 "wesh",
+		TOKEN:                 "admin",
 		ADMIN:                 true,
 		CAN_DOWNLOAD:          true,
 		CAN_CONVERT:           true,

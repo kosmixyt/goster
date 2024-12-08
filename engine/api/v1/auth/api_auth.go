@@ -46,3 +46,21 @@ func Logout(ctx *gin.Context) {
 	session.Save()
 	ctx.JSON(200, gin.H{"status": "ok"})
 }
+func UpdateToken(ctx *gin.Context, db *gorm.DB) {
+	user, err := engine.GetUser(db, ctx, []string{})
+	if err != nil {
+		ctx.JSON(401, gin.H{"error": "not logged in"})
+		return
+	}
+	previousToken := ctx.PostForm("previousToken")
+	newToken := ctx.PostForm("newToken")
+	if previousToken == "" || newToken == "" {
+		ctx.JSON(400, gin.H{"error": "missing parameters"})
+		return
+	}
+	if err := db.Model(&user).Where("id = ? AND token = ?", user.ID, previousToken).Update("token", newToken); err.Error != nil {
+		ctx.JSON(500, gin.H{"error": err.Error.Error()})
+		return
+	}
+	ctx.JSON(200, gin.H{"status": "If its good token is updated"})
+}

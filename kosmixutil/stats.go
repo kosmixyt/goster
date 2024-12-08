@@ -228,27 +228,28 @@ func GetSystemInfo() (*SystemInfoOut, error) {
 var SubstribeDynamic DynamicData = DynamicData{}
 
 func GetDynamicData() {
-	cmd := exec.Command("./wrapper", "network")
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		panic(err)
-	}
-	go func() {
-		scanner := bufio.NewScanner(stdout)
-		for scanner.Scan() {
-			data := scanner.Text()
-			// fmt.Println("Pointer refreshed")
-			err = json.Unmarshal([]byte(data), &SubstribeDynamic)
+	// wrapper can have difficulty to get dynamic data
+	for i := 0; i < 2; i++ {
+		cmd := exec.Command("./wrapper", "network")
+		stdout, err := cmd.StdoutPipe()
+		if err != nil {
+			panic(err)
 		}
-	}()
-	err = cmd.Start()
-	if err != nil {
-		panic(err)
+		go func() {
+			scanner := bufio.NewScanner(stdout)
+			for scanner.Scan() {
+				data := scanner.Text()
+				// fmt.Println("Pointer refreshed")
+				err = json.Unmarshal([]byte(data), &SubstribeDynamic)
+			}
+		}()
+		err = cmd.Start()
+		if err != nil {
+			panic(err)
+		}
+		err = cmd.Wait()
 	}
-	err = cmd.Wait()
-	if err != nil {
-		panic(err)
-	}
+	panic("Dynamic data failed")
 }
 
 type DynamicData struct {

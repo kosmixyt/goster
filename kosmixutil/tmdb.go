@@ -24,7 +24,7 @@ const TMDB_IMAGE_POSTER_RATIO = 0.667
 var TMDB_IMAGE_LOGO_RATIO = []float64{0}
 
 var SHORT_LANGUAGE string = "fr"
-var TMDB_IMAGE_PREFERED_LANGUAGE = []string{"fr", "en", "null"}
+var TMDB_IMAGE_PREFERED_LANGUAGE = []string{}
 
 func InitKeys(tmdb_api_key string, omdb_api_key string, languages []string, lang string) {
 	API_KEY = tmdb_api_key

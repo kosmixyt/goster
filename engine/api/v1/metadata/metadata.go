@@ -245,3 +245,38 @@ func ClearMoviesWithNoMediaAndNoTmdbId(ctx *gin.Context, db *gorm.DB) {
 // 		return
 // 	}
 // }
+
+func BulkSerieMove(ctx *gin.Context, db *gorm.DB) {
+	user, err := engine.GetUser(db, ctx, []string{})
+	if err != nil {
+		ctx.JSON(401, gin.H{"error": "not logged in"})
+		return
+	}
+	if !user.CAN_EDIT {
+		ctx.JSON(403, gin.H{"error": "forbidden"})
+		return
+	}
+	source_id := ctx.PostForm("source_id")
+	target_id := ctx.PostForm("target_id")
+	fmt.Println("source_id", source_id, "target_id", target_id)
+	source, err := engine.Get_tv_via_provider(source_id, true, user.RenderTvPreloads)
+	if err != nil {
+		ctx.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	target, err := engine.Get_tv_via_provider(target_id, true, user.RenderTvPreloads)
+	if err != nil {
+		ctx.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	if source.ID == target.ID {
+		ctx.JSON(400, gin.H{"error": "source and target are the same"})
+		return
+	}
+	if err := source.MoveFiles(target); err != nil {
+		ctx.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(200, gin.H{"message": "ok"})
+
+}

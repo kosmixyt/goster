@@ -2,8 +2,6 @@ package web
 
 import (
 	"fmt"
-	"net/http"
-	"os"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
@@ -21,8 +19,8 @@ import (
 	"kosmix.fr/streaming/engine/api/v1/me"
 	"kosmix.fr/streaming/engine/api/v1/metadata"
 	"kosmix.fr/streaming/engine/api/v1/render"
-	"kosmix.fr/streaming/engine/api/v1/trailer"
 	engine "kosmix.fr/streaming/engine/app"
+	"kosmix.fr/streaming/kosmixutil"
 
 	"kosmix.fr/streaming/engine/api/v1/search"
 	"kosmix.fr/streaming/engine/api/v1/share"
@@ -36,7 +34,7 @@ import (
 
 func WebServer(db *gorm.DB, port string) {
 	r := gin.Default()
-	store := cookie.NewStore([]byte("anotherSecret"))
+	store := cookie.NewStore([]byte(kosmixutil.GenerateRandomKey(32)))
 	r.Use(sessions.Sessions("mysession", store))
 	r.MaxMultipartMemory = engine.Config.Limits.SeasonSize
 	r.Use(func(ctx *gin.Context) {
@@ -48,21 +46,21 @@ func WebServer(db *gorm.DB, port string) {
 			ctx.AbortWithStatus(204)
 			return
 		}
-		session := sessions.Default(ctx)
-		session.Options(sessions.Options{
-			Secure:   true,
-			SameSite: http.SameSiteNoneMode,
+		sess := sessions.Default(ctx)
+		sess.Options(sessions.Options{
+			Secure: false,
 		})
 	})
 	r.Use(static.Serve("/", static.LocalFile("./build/", false)))
 	r.NoRoute(func(ctx *gin.Context) { ctx.File("./build/index.html") })
-	r.GET("/kill", func(ctx *gin.Context) { os.Exit(200) })
+	// r.GET("/kill", func(ctx *gin.Context) { os.Exit(200) })
 	r.POST("/api/metadata/update", func(ctx *gin.Context) { metadata.AssignFileToMedia(ctx, db) })
 	r.GET("/api/metadata/clean", func(ctx *gin.Context) { metadata.ClearMoviesWithNoMediaAndNoTmdbId(ctx, db) })
 	r.GET("/api/metadata/items", func(ctx *gin.Context) { metadata.GetUnAssignedMedias(ctx, db) })
+	r.POST("/api/metadata/serie/move", func(ctx *gin.Context) { metadata.BulkSerieMove(ctx, db) })
 	r.GET("/api/image", func(ctx *gin.Context) { image.HandlePoster(ctx, db) })
 	// to patch
-	r.GET("/api/trailer", func(ctx *gin.Context) { trailer.HandleTrailerRequest(ctx, db) })
+	// r.GET("/api/trailer", func(ctx *gin.Context) { trailer.HandleTrailerRequest(ctx, db) })
 	r.GET("/api/download", func(ctx *gin.Context) { download.DownloadItem(ctx, db) })
 	r.GET("/api/watchlist", func(ctx *gin.Context) { watchlist.WatchListEndpoint(ctx, db) })
 	r.GET("/api/render", func(ctx *gin.Context) { render.RenderItem(ctx, db) })
@@ -81,6 +79,7 @@ func WebServer(db *gorm.DB, port string) {
 	r.GET("/api/transcode/:uuid/manifest", func(ctx *gin.Context) { transcode.TranscodeManifest(ctx, db) })
 	r.GET("/api/transcode/stop/:uuid", func(ctx *gin.Context) { transcode.Stop(ctx, db) })
 	r.GET("/api/transcode/segment/:uuid/:number", func(ctx *gin.Context) { transcode.TranscodeSegment(ctx, db) })
+	r.POST("/api/token", func(ctx *gin.Context) { auth.UpdateToken(ctx, db) })
 	r.GET("/api/transcode/:uuid/subtitle/:index", func(ctx *gin.Context) { transcode.TranscodeSubtitle(ctx, db) })
 	r.POST("/api/transcode/convert", func(ctx *gin.Context) { transcode.Convert(db, ctx, r) })
 	r.GET("/api/transcode/convert/action", func(ctx *gin.Context) { transcode.Action(db, ctx, r) })
@@ -107,7 +106,7 @@ func WebServer(db *gorm.DB, port string) {
 	r.GET("/api/torrents/action", func(ctx *gin.Context) { torrents.TorrentAction(ctx, db) })
 	r.GET("/api/torrents/storage", func(ctx *gin.Context) { admin.GetAvailablePaths(ctx, db) })
 	r.GET("/api/admin/info", func(ctx *gin.Context) { admin.AdminInfo(ctx, db) })
-	r.GET("/test", func(ctx *gin.Context) { ctx.JSON(200, gin.H{"message": "ok"}) })
+	// r.GET("/test", func(ctx *gin.Context) { ctx.JSON(200, gin.H{"message": "ok"}) })
 	fmt.Println("Starting server on port " + (port))
 	if engine.IsSsl() {
 		r.RunTLS(":"+port, engine.Config.Cert.Cert, engine.Config.Cert.Key)
