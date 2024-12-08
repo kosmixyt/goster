@@ -37,6 +37,10 @@
 
 ![Convert](https://i.ibb.co/pRmVhD0/player.png)
 
+#### Recommendations
+
+![Convert](https://i.ibb.co/jv64TWx/recomm.png)
+
 ## Features:
 
 - Multiple File source protocol (local fs, sftp)
