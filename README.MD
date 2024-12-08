@@ -160,8 +160,9 @@ services:
     volumes:
       - ./config.json:/app/config.json # config mount point
       - ./cache/:/app/cache/ # cache mount point
+      - ./dl/:/app/dl/ # torrent mount point
       #if you use sqlite uncomment
-      # - ./streaming.db:/app/streaming.db
+      # - ./db/streaming.db:/app/db/streaming.db
     networks:
       - private_network
 networks:
