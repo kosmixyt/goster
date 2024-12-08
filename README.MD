@@ -182,7 +182,7 @@ and the config.json must be in the same directory of docker-compose.yaml
 ```
 services:
   app:
-    image: goapp
+    image: kosmix/goapp
     ports:
       - "80:80"
     volumes:
