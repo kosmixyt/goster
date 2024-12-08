@@ -47,7 +47,7 @@
 - Basic torrent action (pause, download as zip, download .torrent, delete (withfiles))
 - Directory scanner (like plex and emby) and metadata search based on filenames
 - File Converting (while downloading support)
-- Multi-user
+- Multi-user (currently only via db)
 - Metadata manager
 - Iptv Support
 - Tmdb recommendating based on you watched movies/tv
