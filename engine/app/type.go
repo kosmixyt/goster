@@ -292,6 +292,7 @@ type SKINNY_RENDER struct {
 	TRANSCODE_URL string
 	LOGO          string
 	PROVIDERS     []PROVIDERItem
+	DisplayData   string
 }
 type GenreClassement struct {
 	Genre    GENRE

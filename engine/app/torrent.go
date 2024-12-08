@@ -28,8 +28,10 @@ func CreateClient() {
 	var err error
 	defaultConfig := torrent.NewDefaultClientConfig()
 	defaultConfig.DisableIPv6 = true
+
 	defaultConfig.Seed = true
 	client, err = torrent.NewClient(defaultConfig)
+
 	if err != nil {
 		panic(err)
 	}
@@ -702,12 +704,17 @@ func CleanDeleteTorrent(withFiles bool, torrent *GlTorrentItem, db *gorm.DB) err
 	torrent.Torrent.Drop()
 	for _, file := range files {
 		if withFiles {
-			// fileWrapper := file.LoadStorage()
-			// if _, err := file.stats(); err == nil {
-			// 	if err := fileWrapper.toConn().Remove(file.GetPath(true)); err != nil {
-			// 		panic(err)
-			// 	}
-			// }
+			fileWrapper, err := file.LoadStorage()
+			if err != nil {
+				fmt.Println("file is in torrent_path")
+				os.Remove(file.GetPath(true))
+			} else {
+				if _, err := file.stats(); err == nil {
+					if err := fileWrapper.toConn().Remove(file.GetPath(true)); err != nil {
+						panic(err)
+					}
+				}
+			}
 			db.Unscoped().Where("file_id = ?", file.ID).Delete(&WATCHING{})
 			db.Unscoped().Delete(file)
 		} else {

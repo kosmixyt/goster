@@ -2,6 +2,7 @@ package engine
 
 import (
 	"fmt"
+	"strconv"
 
 	"gorm.io/gorm"
 )
@@ -40,7 +41,7 @@ func (e *EPISODE) GetNumberAsString(withC bool) string {
 	if e.NUMBER < 10 && withC {
 		c = "0"
 	}
-	return c + string(e.NUMBER)
+	return c + strconv.Itoa(e.NUMBER)
 }
 func (e *EPISODE) HasFile(file *FILE) bool {
 	if len(e.FILES) == 0 {

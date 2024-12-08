@@ -116,7 +116,8 @@ func NewTranscoder(app *gin.Engine, ctx *gin.Context, db *gorm.DB) {
 			Preload("TV.GENRE").
 			Preload("TV.SEASON").
 			Preload("TV.SEASON.EPISODES").
-			Preload("TV.SEASON.EPISODES.WATCHING", "user_id = ?", user.ID)
+			Preload("TV.SEASON.EPISODES.WATCHING", "user_id = ?", user.ID).
+			Preload("TV.SEASON.EPISODES.FILES")
 	}
 	var WatchingItem *engine.WATCHING = fileItem.GetWatching(&user, preload)
 	db.Save(&user)
@@ -213,7 +214,7 @@ func NewTranscoder(app *gin.Engine, ctx *gin.Context, db *gorm.DB) {
 		res.Backdrop = WatchingItem.MOVIE.Backdrop("high")
 	} else {
 		res.Seasons = WatchingItem.TV.ToSeason()
-		res.Name = WatchingItem.TV.NAME + " " + WatchingItem.EPISODE.SEASON.GetNumberAsString(true) + " " + WatchingItem.EPISODE.GetNumberAsString(true)
+		res.Name = WatchingItem.TV.NAME + " S" + WatchingItem.EPISODE.SEASON.GetNumberAsString(true) + " E" + WatchingItem.EPISODE.GetNumberAsString(true)
 		res.Poster = WatchingItem.TV.Poster("high")
 		res.Backdrop = WatchingItem.TV.Backdrop("high")
 	}

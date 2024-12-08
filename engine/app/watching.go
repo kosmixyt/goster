@@ -60,7 +60,12 @@ func (w *WATCHING) ToSkinny() SKINNY_RENDER {
 		return w.MOVIE.Skinny(w)
 	}
 	if w.TV != nil {
-		return w.TV.Skinny(w)
+		data := w.TV.Skinny(w)
+		data.DisplayData = "S" + w.EPISODE.SEASON.GetNumberAsString(true) + "E" + w.EPISODE.GetNumberAsString(true)
+		if w.EPISODE.NAME != "" {
+			data.DisplayData += " - " + w.EPISODE.NAME
+		}
+		return data
 	}
 	panic("Invalid type")
 }

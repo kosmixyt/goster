@@ -25,3 +25,5 @@ bin.exe
 files.txt
 configdocker.json
 docker/db/streaming.db
+wrapper.exe
+streaming.db
