@@ -5,6 +5,37 @@
 - patch are welcome
 - Don't expose to internet !!!!! i'm a very bad dev
 - You should host this on server with good CPU
+-
+
+# Screenshots:
+
+#### Landing page
+
+![Convert](https://i.ibb.co/mHDyvNj/reallanding.png)
+
+#### Movie Details
+
+![Convert](https://i.ibb.co/c8C6f8r/render-Movie.png)
+
+#### Tv Show Details
+
+![Convert](https://i.ibb.co/W30K6fz/renderTv.png)
+
+#### Mosaique
+
+![Convert](https://i.ibb.co/vs2GthB/landing.png)
+
+#### /me
+
+![Convert](https://i.ibb.co/QJtvnLr/myaccount.png)
+
+#### Metadata updater
+
+![Convert](https://i.ibb.co/Syf33CN/metadata.png)
+
+#### Player
+
+![Convert](https://i.ibb.co/pRmVhD0/player.png)
 
 ## Features:
 
