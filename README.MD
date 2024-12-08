@@ -43,7 +43,7 @@
 - Multiplatform support (tested on linux and windows)
 - Fetch Torrent From Various providers (yggtorrents(with cloudflare), sharewoord)
 - Transcoder on the fly : (subtitles supported (except pks), multi audio track, quality selector 360p-1080p)
-- You can watch the movies/episode that are being downloaded, the access time to a film/episode that you do not have in your library is very generally <10sec (this depends on the number of seeders) (https://youtu.be/phybrLu-Nqg)
+- You can watch the movies/episode that are being downloaded, the access time to a film/episode that you do not have in your library is very generally <10sec (this depends on the number of seeders)
 - Basic torrent action (pause, download as zip, download .torrent, delete (withfiles))
 - Directory scanner (like plex and emby) and metadata search based on filenames
 - File Converting (while downloading support)
