@@ -208,3 +208,7 @@ networks:
 - Move torrent to other file storage (without / continue seeding)
 - DDL provider
 - User manager
+
+## Contact :
+
+Discord : "KOSMIX.FR"
