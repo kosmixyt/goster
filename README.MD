@@ -77,8 +77,8 @@
     "database": "./db/streaming.db"
   },
   "cert": {
-    "key": "",
-    "cert": ""
+    "key": "path to ssl key or leave empty",
+    "cert": "path to ssl cert or leave empty"
   },
   "limits": {
     "check_interval": 24,
@@ -99,7 +99,7 @@
   },
   "cache_path": "/app/cache/",
   "metadata": {
-    "tmdb": "",
+    "tmdb": "tmdb api_key",
     "tmdb_iso3166": "FR",
     "tmdb_movie_watch_providers": {
       "Netflix": 8,
@@ -112,7 +112,7 @@
       "Amazon Video": 10
     },
     "tmdb_tv_watch_providers": {},
-    "omdb": "",
+    "omdb": "omdb api key",
     "tmdb_lang": "fr",
     "tmdb_lang_imgs": [
       "fr",
@@ -122,9 +122,9 @@
   },
   "cloudflare": {
     "challenge_resolver": "puppeteer",
-    "flaresolverr_url": "",
-    "capsolverr_proxy_url": "",
-    "capsolverr_api_key": ""
+    "flaresolverr_url": "leave empty",
+    "capsolverr_proxy_url": "leave empty",
+    "capsolverr_api_key": "leave empty"
   },
   "torrent_providers": {
     "sharewood": {
@@ -133,8 +133,8 @@
       "password": ""
     },
     "ygg": {
-      "username": "",
-      "password": ""
+      "username": "ygg username",
+      "password": "ygg password"
     }
   }
 }
