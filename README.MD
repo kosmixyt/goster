@@ -172,9 +172,6 @@
 
 ```
 
-- Run bin.exe|bin
-- Wait 1/2min (check console) and go to http://localhost
-
 ### Default token : admin
 
 # Docker Compose
@@ -200,6 +197,8 @@ networks:
   private_network:
     driver: bridge
 ```
+
+- Wait 1/2min (check console) and go to http://localhost
 
 # Todo :
 
