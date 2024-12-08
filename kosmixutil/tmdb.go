@@ -148,6 +148,9 @@ func GetFullMovie(id int, year int64) (METADATA_FULL_MOVIE, error) {
 	if imdb_id == "" {
 		imdb_id = result.Imdb_id
 	}
+	if OMDB_API_KEY == "" {
+		return jsonData, nil
+	}
 	url = "https://www.omdbapi.com/?apikey=" + OMDB_API_KEY + "&i=" + imdb_id
 	resp, err = http.Get(url)
 	if err != nil {
