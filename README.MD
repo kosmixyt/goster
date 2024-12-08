@@ -102,7 +102,8 @@
 
 # Docker Compose
 
-you must configure config.json before, (you can let default value of cache_path)
+you must configure config.json before (you can let default value of cache_path)
+and the config.json must be in the same directory of docker-compose.yaml
 
 ```
 services:
