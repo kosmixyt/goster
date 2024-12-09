@@ -18,11 +18,11 @@ func GetMediaReader(db *gorm.DB, user *User, mediaType string, provider string, 
 		if season == 0 || episode == 0 {
 			return nil, fmt.Errorf("invalid season or episode")
 		}
-		SeasonElement := tv.GetSeason(season, false)
+		SeasonElement := tv.GetSeason(season, false, db)
 		if SeasonElement == nil {
 			return nil, fmt.Errorf("season not found in serie")
 		}
-		EpisodeElement := SeasonElement.GetEpisode(episode, false)
+		EpisodeElement := SeasonElement.GetEpisode(episode, false, db)
 		if EpisodeElement == nil {
 			return nil, fmt.Errorf("episode not found in serie")
 		}

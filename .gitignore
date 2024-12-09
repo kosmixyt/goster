@@ -28,3 +28,4 @@ docker/db/streaming.db
 wrapper.exe
 streaming.db
 main.py
+streaming.db-journal
