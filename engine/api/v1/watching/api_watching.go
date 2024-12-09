@@ -28,7 +28,7 @@ func DeleteFromWatchingList(ctx *gin.Context, db *gorm.DB) {
 	}
 	field := elementType + "_id"
 	var watching engine.WATCHING
-	if tx := db.Where("user_id = ? AND "+field+" = ?", user.ID, id).First(&watching); tx.Error != nil {
+	if tx := db.Where("user_id = ? AND ? = ?", field, user.ID, id).Find(&watching); tx.Error != nil {
 		ctx.JSON(400, gin.H{"error": "element not found"})
 		return
 	}
