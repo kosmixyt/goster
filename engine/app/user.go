@@ -14,26 +14,28 @@ import (
 
 type User struct {
 	gorm.Model
-	ID                        uint                  `gorm:"unique;not null,primary_key"` // use
-	NAME                      string                `gorm:"not null"`
-	EMAIL                     string                `gorm:"unique"`
-	TOKEN                     string                `gorm:"unique;not null"`
-	ADMIN                     bool                  `gorm:"not null,default:false"`
-	CAN_DOWNLOAD              bool                  `gorm:"not null"`
-	CAN_CONVERT               bool                  `gorm:"not null"`
-	CAN_ADD_FILES             bool                  `gorm:"not null"`
-	SHARES                    []Share               `gorm:"foreignKey:OWNER_ID"`
-	CAN_UPLOAD                bool                  `gorm:"not null"`
-	CAN_DELETE                bool                  `gorm:"not null"`
-	CAN_EDIT                  bool                  `gorm:"not null"`
-	CAN_TRANSCODE             bool                  `gorm:"not null"`
-	MAX_TRANSCODING           int                   `gorm:"not null"`
-	TRANSCODING               int                   `gorm:"not null"`
-	ALLOWED_UPLOAD_NUMBER     int64                 `gorm:"not null"`
-	CURRENT_UPLOAD_NUMBER     int64                 `gorm:"not null"`
-	CURRENT_UPLOAD_SIZE       int64                 `gorm:"not null"`
-	ALLOWED_UPLOAD_SIZE       int64                 `gorm:"not null"`
-	REAL_UPLOAD_SIZE          int64                 `gorm:"not null"`
+	ID                    uint    `gorm:"unique;not null,primary_key"` // use
+	NAME                  string  `gorm:"not null"`
+	EMAIL                 string  `gorm:"unique"`
+	TOKEN                 string  `gorm:"unique;not null"`
+	ADMIN                 bool    `gorm:"not null,default:false"`
+	CAN_DOWNLOAD          bool    `gorm:"not null"`
+	CAN_CONVERT           bool    `gorm:"not null"`
+	CAN_ADD_FILES         bool    `gorm:"not null"`
+	SHARES                []Share `gorm:"foreignKey:OWNER_ID"`
+	CAN_UPLOAD            bool    `gorm:"not null"`
+	CAN_DELETE            bool    `gorm:"not null"`
+	CAN_EDIT              bool    `gorm:"not null"`
+	CAN_TRANSCODE         bool    `gorm:"not null"`
+	MAX_TRANSCODING       int     `gorm:"not null"`
+	TRANSCODING           int     `gorm:"not null"`
+	ALLOWED_UPLOAD_NUMBER int64   `gorm:"not null"`
+	CURRENT_UPLOAD_NUMBER int64   `gorm:"not null"`
+	CURRENT_UPLOAD_SIZE   int64   `gorm:"not null"`
+	ALLOWED_UPLOAD_SIZE   int64   `gorm:"not null"`
+	REAL_UPLOAD_SIZE      int64   `gorm:"not null"`
+	// on_demand = don't download, download only if requested
+	// full = download all files when added
 	TORRENT_DOWNLOAD_STRATEGY string                `gorm:"not null;default:on_demand"`
 	TORRENTS                  []Torrent             `gorm:"foreignKey:USER_ID"`
 	WATCH_LIST_MOVIES         []MOVIE               `gorm:"many2many:watch_list_movies;"`
@@ -343,13 +345,16 @@ func GetRecent(db *gorm.DB, user User) *Line_Render {
 		Preload("GENRE").
 		Preload("WATCHING", "user_id = ? ", user.ID).
 		Preload("WATCHLISTS", "id = ? ", user.ID).
+		Where("BACKDROP_IMAGE_PATH IS NOT NULL").
 		Limit(15)
+
 	reqSerie := db.
 		Order("created_at desc").
 		Preload("PROVIDERS").
 		Preload("GENRE").
 		Preload("WATCHING", "user_id = ? ", user.ID).
 		Preload("WATCHLISTS", "id = ? ", user.ID).
+		Where("BACKDROP_IMAGE_PATH IS NOT NULL").
 		Limit(15)
 	if reqSerie.Find(&RecentTVs).Error != nil || reqMovie.Find(&RecentMovies).Error != nil {
 		panic("error while getting recent movies or series")

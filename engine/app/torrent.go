@@ -506,6 +506,9 @@ func InitTorrents(db *gorm.DB) {
 }
 
 func RegisterHandlers(torrent *torrent.Torrent, dbElement *Torrent, db *gorm.DB, user *User) {
+	if user.TORRENT_DOWNLOAD_STRATEGY == "full" {
+		torrent.DownloadAll()
+	}
 	startDownloaded := dbElement.DOWNLOAD
 	startUploaded := dbElement.UPLOAD
 	startDlPath := dbElement.DL_PATH

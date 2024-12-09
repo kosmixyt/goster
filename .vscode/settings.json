@@ -6,6 +6,7 @@
         "**/CVS": true,
         "**/.DS_Store": true,
         "**/Thumbs.db": true,
+        "go": true,
         ".vscode": true,
         ".torrent.db": true,
         ".torrent.db-shm": true,

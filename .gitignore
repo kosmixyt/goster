@@ -27,3 +27,4 @@ configdocker.json
 docker/db/streaming.db
 wrapper.exe
 streaming.db
+main.py
