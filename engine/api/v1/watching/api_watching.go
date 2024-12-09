@@ -1,6 +1,8 @@
 package watching
 
 import (
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	engine "kosmix.fr/streaming/engine/app"
@@ -27,11 +29,10 @@ func DeleteFromWatchingList(ctx *gin.Context, db *gorm.DB) {
 		return
 	}
 	field := elementType + "_id"
-	var watching engine.WATCHING
-	if tx := db.Where("user_id = ? AND ? = ?", field, user.ID, id).Find(&watching); tx.Error != nil {
-		ctx.JSON(400, gin.H{"error": "element not found"})
+	fmt.Println("user.ID", user.ID, "field", field, "id", id)
+	if tx := db.Where("user_id = ? AND "+field+" = ?", user.ID, id).Delete(&engine.WATCHING{}); tx.Error != nil {
+		ctx.JSON(400, gin.H{"error": tx.Error.Error()})
 		return
 	}
-	db.Delete(&watching)
 	ctx.JSON(200, gin.H{"status": "ok"})
 }
