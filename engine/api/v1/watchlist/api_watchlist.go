@@ -21,6 +21,7 @@ func WatchListEndpoint(ctx *gin.Context, db *gorm.DB) {
 	}
 
 }
+
 func WatchListController(action string, itype string, id string, user *engine.User, db *gorm.DB) (error, []engine.SKINNY_RENDER) {
 	if itype == engine.Movie {
 		movie, err := engine.Get_movie_via_provider(id, true, func() *gorm.DB { return db })

@@ -8,31 +8,32 @@ import (
 	engine "kosmix.fr/streaming/engine/app"
 )
 
+func DeleteFromWatchingListController(user *engine.User, db *gorm.DB, elementType string, uuid string) error {
+	if elementType != engine.Tv && elementType != engine.Movie {
+		return fmt.Errorf("invalid type")
+	}
+	provider, id, err := engine.ParseIdProvider(uuid)
+	if err != nil {
+		return err
+	}
+	if provider != "db" {
+		return fmt.Errorf("invalid provider")
+	}
+	field := elementType + "_id"
+	if tx := db.Where("user_id = ? AND "+field+" = ?", user.ID, id).Delete(&engine.WATCHING{}); tx.Error != nil {
+		return tx.Error
+	}
+	return nil
+}
+
 func DeleteFromWatchingList(ctx *gin.Context, db *gorm.DB) {
 	user, err := engine.GetUser(db, ctx, []string{})
 	if err != nil {
-		ctx.JSON(400, gin.H{"error": "user not found"})
+		ctx.JSON(401, gin.H{"error": "not logged in"})
 		return
 	}
-	elementType := ctx.Query("type")
-	if elementType != engine.Tv && elementType != engine.Movie {
-		ctx.JSON(400, gin.H{"error": "type is required"})
+	if err := DeleteFromWatchingListController(&user, db, ctx.Query("type"), ctx.Query("id")); err != nil {
+		ctx.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	provider, id, err := engine.ParseIdProvider(ctx.Query("uuid"))
-	if err != nil {
-		ctx.JSON(400, gin.H{"error": "invalid id"})
-		return
-	}
-	if provider != "db" {
-		ctx.JSON(400, gin.H{"error": "invalid provider"})
-		return
-	}
-	field := elementType + "_id"
-	fmt.Println("user.ID", user.ID, "field", field, "id", id)
-	if tx := db.Where("user_id = ? AND "+field+" = ?", user.ID, id).Delete(&engine.WATCHING{}); tx.Error != nil {
-		ctx.JSON(400, gin.H{"error": tx.Error.Error()})
-		return
-	}
-	ctx.JSON(200, gin.H{"status": "ok"})
 }

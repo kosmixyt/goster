@@ -26,43 +26,48 @@ func HeadersMiddleware() gin.HandlerFunc {
 		c.Next()
 	}
 }
-func NewTranscoder(app *gin.Engine, ctx *gin.Context, db *gorm.DB) {
-	user, err := engine.GetUser(db, ctx, []string{})
-	if err != nil {
-		kosmixutil.SendEvent(ctx, engine.ServerSideError, "not logged in")
-		return
-	}
+func NewTranscoderController(
+	app *gin.Engine,
+	db *gorm.DB,
+	user *engine.User,
+	progress func(event string, data string),
+	fileIdstr string,
+	mediaType string,
+	season_str string,
+	episode_str string,
+	id string,
+	torrent_id_str string,
+	close_chan func() <-chan bool,
+) {
 	if !user.CAN_TRANSCODE_FILE() {
-		kosmixutil.SendEvent(ctx, engine.ServerSideError, "not allowed to transcode")
+		progress(engine.ServerSideError, "not allowed to transcode")
 		return
 	}
-	kosmixutil.SendEvent(ctx, "progress", "Processing request")
+	progress("progress", "Processing request")
 	task := user.CreateTask("Transcode", func() error { return errors.New("uncancellable task") })
-	fileIdstr := ctx.Query("fileId")
 	var fileItem *engine.FILE
 	if fileIdstr != "" {
 		fileId, err := strconv.Atoi(fileIdstr)
 		if err != nil {
 			task.SetAsError(err)
-			kosmixutil.SendEvent(ctx, engine.ServerSideError, "invalid fileId")
+			progress(engine.ServerSideError, "invalid fileId")
 			return
 		}
 		var file engine.FILE
 		if tx := db.Preload("MOVIE").Preload("TV").Where("id = ?", fileId).First(&file); tx.Error != nil {
-			kosmixutil.SendEvent(ctx, engine.ServerSideError, task.SetAsError(tx.Error).(error).Error())
+			progress(engine.ServerSideError, task.SetAsError(tx.Error).(error).Error())
 			return
 		}
-		kosmixutil.SendEvent(ctx, "progress", "File found "+file.FILENAME)
+		progress("progress", "File found "+file.FILENAME)
 		fileItem = &file
 	} else {
-		var mediaType = ctx.Query("type")
 		if mediaType != engine.Tv && mediaType != "movie" {
-			kosmixutil.SendEvent(ctx, engine.ServerSideError, task.SetAsError(errors.New("invalid type")).(error).Error())
+			progress(engine.ServerSideError, task.SetAsError(errors.New("invalid type")).(error).Error())
 			return
 		}
-		provider, id, err := engine.ParseIdProvider(ctx.Query("id"))
+		provider, id, err := engine.ParseIdProvider(id)
 		if err != nil {
-			kosmixutil.SendEvent(ctx, engine.ServerSideError, task.SetAsError(err).(error).Error())
+			progress(engine.ServerSideError, task.SetAsError(err).(error).Error())
 			return
 		}
 		switch provider {
@@ -72,38 +77,37 @@ func NewTranscoder(app *gin.Engine, ctx *gin.Context, db *gorm.DB) {
 			provider = "id"
 		default:
 			task.SetAsError(errors.New("invalid provider"))
-			kosmixutil.SendEvent(ctx, engine.ServerSideError, "invalid provider")
+			progress(engine.ServerSideError, "invalid provider")
 			return
 		}
 		var season int = 0
 		var episode int = 0
 		if mediaType == engine.Tv {
-			if _, err = fmt.Sscanf(ctx.Query("season"), "%d", &season); err != nil {
+			if _, err = fmt.Sscanf(season_str, "%d", &season); err != nil {
 				task.SetAsError(err)
-				kosmixutil.SendEvent(ctx, engine.ServerSideError, "invalid season")
+				progress(engine.ServerSideError, "invalid season")
 				return
 			}
-			if _, err = fmt.Sscanf(ctx.Query("episode"), "%d", &episode); err != nil {
+			if _, err = fmt.Sscanf(episode_str, "%d", &episode); err != nil {
 				task.SetAsError(err)
-				kosmixutil.SendEvent(ctx, engine.ServerSideError, "invalid episode")
+				progress(engine.ServerSideError, "invalid episode")
 				return
 			}
 			if season == 0 || episode == 0 {
 				task.SetAsError(errors.New("invalid season or episode"))
-				kosmixutil.SendEvent(ctx, engine.ServerSideError, "invalid season or episode")
+				progress(engine.ServerSideError, "invalid season or episode")
 				return
 			}
 		}
-		torrent_id_str := ctx.Query("torrent_id")
-		ItemFile, err := engine.GetMediaReader(db, &user, mediaType, provider, id, season, episode, torrent_id_str, task, func(s string) { kosmixutil.SendEvent(ctx, "progress", s) })
+		ItemFile, err := engine.GetMediaReader(db, user, mediaType, provider, id, season, episode, torrent_id_str, task, func(s string) { progress("progress", s) })
 		if err != nil {
-			kosmixutil.SendEvent(ctx, engine.ServerSideError, task.SetAsError(err).(error).Error())
+			progress(engine.ServerSideError, task.SetAsError(err).(error).Error())
 			return
 		}
 		fileItem = ItemFile
 	}
 	if fileItem.ID == 0 {
-		kosmixutil.SendEvent(ctx, engine.ServerSideError, task.SetAsError(errors.New("file not found")).(error).Error())
+		progress(engine.ServerSideError, task.SetAsError(errors.New("file not found")).(error).Error())
 		return
 	}
 	preload := func() *gorm.DB {
@@ -119,7 +123,7 @@ func NewTranscoder(app *gin.Engine, ctx *gin.Context, db *gorm.DB) {
 			Preload("TV.SEASON.EPISODES.WATCHING", "user_id = ?", user.ID).
 			Preload("TV.SEASON.EPISODES.FILES")
 	}
-	var WatchingItem *engine.WATCHING = fileItem.GetWatching(&user, preload)
+	var WatchingItem *engine.WATCHING = fileItem.GetWatching(user, preload)
 	db.Save(&user)
 	Tracks := make([]engine.AUDIO_TRACK, 1)
 	Subtitles := make([]engine.SUBTITLE, 1)
@@ -176,9 +180,9 @@ func NewTranscoder(app *gin.Engine, ctx *gin.Context, db *gorm.DB) {
 			FETCHING_DATA:     false,
 			Db:                db,
 		}
-		kosmixutil.SendEvent(ctx, "progress", "Transcoder Waiting ffprobe Data")
-		transcoder.GetData(ctx.Writer.CloseNotify())
-		kosmixutil.SendEvent(ctx, "progress", "Transcoder Data Received")
+		progress("progress", "Transcoder Waiting ffprobe Data")
+		transcoder.GetData(close_chan())
+		progress("progress", "Transcoder Data Received")
 		WatchingItem.TOTAL = int64(transcoder.LENGTH)
 		engine.Transcoders = append(engine.Transcoders, transcoder)
 		Tracks = transcoder.TRACKS
@@ -188,7 +192,7 @@ func NewTranscoder(app *gin.Engine, ctx *gin.Context, db *gorm.DB) {
 		Qu = transcoder.QUALITYS
 	} else {
 		Uuid = "--no-needed--"
-		Url = engine.Create206Allowed(app, fileItem, &user)
+		Url = engine.Create206Allowed(app, fileItem, user)
 	}
 
 	res := engine.TranscoderRes{
@@ -220,15 +224,34 @@ func NewTranscoder(app *gin.Engine, ctx *gin.Context, db *gorm.DB) {
 	}
 	b, err := json.Marshal(res)
 	if err != nil {
-		kosmixutil.SendEvent(ctx, engine.ServerSideError, task.SetAsError(err).(error).Error())
+		progress(engine.ServerSideError, task.SetAsError(err).(error).Error())
 		return
 	}
 
-	kosmixutil.SendEvent(ctx, "transcoder", string(b))
+	progress("transcoder", string(b))
 }
 
-func NewTranscoderController() {
-
+func NewTranscoder(app *gin.Engine, ctx *gin.Context, db *gorm.DB) {
+	user, err := engine.GetUser(db, ctx, []string{})
+	if err != nil {
+		kosmixutil.SendEvent(ctx, engine.ServerSideError, "not logged in")
+		return
+	}
+	NewTranscoderController(
+		app,
+		db,
+		&user,
+		func(event, data string) {
+			kosmixutil.SendEvent(ctx, event, data)
+		},
+		ctx.Query("fileId"),
+		ctx.Query("type"),
+		ctx.Query("season"),
+		ctx.Query("episode"),
+		ctx.Query("id"),
+		ctx.Query("torrent_id"),
+		func() <-chan bool { return ctx.Writer.CloseNotify() },
+	)
 }
 
 func TranscodeSegment(ctx *gin.Context, db *gorm.DB) {
@@ -239,56 +262,47 @@ func TranscodeSegment(ctx *gin.Context, db *gorm.DB) {
 	}
 	uuid := ctx.Param("uuid")
 	number := ctx.Param("number")
-	var transcoder *engine.Transcoder
-	for _, t := range engine.Transcoders {
-		if t.UUID == uuid && user.ID == t.OWNER_ID {
-			transcoder = t
-			break
-		}
-	}
-	if transcoder == nil {
-		ctx.JSON(404, gin.H{"error": "transcoder not found"})
+	quality := ctx.Request.Header.Get("X-Quality")
+	x_track := ctx.Request.Header.Get("X-Track")
+	currentPlayBack := ctx.Request.Header.Get("X-Current-Time")
+	data, err := TranscodeSegmentController(&user, uuid, number, quality, x_track, currentPlayBack)
+	if err != nil {
+		ctx.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
+	ctx.Data(200, "application/octet-stream", data)
+}
+func TranscodeSegmentController(user *engine.User, uuid string, number string, QualityName string, x_track string, currentPlayBack string) ([]byte, error) {
 
+	transcoder := user.GetTranscode(uuid)
+	if transcoder == nil {
+		return nil, errors.New("transcoder not found")
+	}
 	var index int
-	if _, err = fmt.Sscanf(number, "%d", &index); err != nil {
-		fmt.Println("error while scanning number", number)
-		ctx.JSON(400, gin.H{"error": "invalid number"})
-		return
+	if _, err := fmt.Sscanf(number, "%d", &index); err != nil {
+		return nil, errors.New("invalid number")
 	}
 	if index < 0 {
-		ctx.JSON(400, gin.H{"error": "invalid number"})
-		return
+		return nil, errors.New("invalid number")
 	}
-	QualityName := ctx.Request.Header.Get("X-QUALITY")
 	if QualityName == "" {
 		QualityName = "1080p"
 	}
 	TrackIndex := 0
-	if _, err = fmt.Sscanf(ctx.Request.Header.Get("X-TRACK"), "%d", &TrackIndex); err != nil {
-		ctx.JSON(400, gin.H{"error": "invalid track"})
-		return
+	if _, err := fmt.Sscanf(x_track, "%d", &TrackIndex); err != nil {
+		return nil, errors.New("invalid track")
 	}
 	if !transcoder.HasAudioStream(TrackIndex) {
-		ctx.JSON(400, gin.H{"error": "invalid track"})
-		return
+		return nil, errors.New("invalid track")
 	}
 	qual, err := transcoder.GetQuality(QualityName)
 	if err != nil {
-		ctx.JSON(400, gin.H{"error": "invalid quality"})
-		return
+		return nil, errors.New("invalid quality")
 	}
-	// if (*transcoder.Last_request_time).Add(100 * time.Millisecond).After(time.Now()) {
-	// 	ctx.JSON(429, gin.H{"error": "too many requests"})
-	// 	return
-	// }
-	currentPlayBack := ctx.Request.Header.Get("X-CURRENT-TIME")
 	if currentPlayBack != "" {
 		var current int64 = 0
 		if _, err = fmt.Sscanf(currentPlayBack, "%d", &current); err != nil {
-			ctx.JSON(400, gin.H{"error": "invalid current time"})
-			return
+			return nil, errors.New("invalid current")
 		}
 		transcoder.SetCurrentTime(current, index)
 	}
@@ -299,17 +313,15 @@ func TranscodeSegment(ctx *gin.Context, db *gorm.DB) {
 	transcoder.Request_pending = false
 	if err != nil {
 		transcoder.Task.AddLog("Error while getting segment: " + err.Error())
-		ctx.JSON(500, gin.H{"error": "error while getting segment" + err.Error()})
-		return
+		return nil, errors.New("error while getting segment")
 	}
 	data, err := io.ReadAll(segment)
 	if err != nil {
-		ctx.JSON(500, gin.H{"error": "error while reading segment" + err.Error()})
-		return
+		return nil, errors.New("error while reading segment")
 	}
-	ctx.Writer.Header().Set("Content-Length", fmt.Sprintf("%d", len(data)))
-	ctx.Data(200, "application/octet-stream", data)
-	data = nil
+	// ctx.Writer.Header().Set("Content-Length", fmt.Sprintf("%d", len(data)))
+	// ctx.Data(200, "application/octet-stream", data)
+	return data, nil
 }
 func TranscodeManifest(ctx *gin.Context, db *gorm.DB) {
 	user, err := engine.GetUser(db, ctx, []string{})
@@ -318,61 +330,60 @@ func TranscodeManifest(ctx *gin.Context, db *gorm.DB) {
 		return
 	}
 	uuid := ctx.Param("uuid")
-	var transcoder *engine.Transcoder
-	for _, tr := range engine.Transcoders {
-		if tr.UUID == uuid && user.ID == tr.OWNER_ID {
-			transcoder = tr
-			break
-		}
-	}
-	if transcoder == nil {
-		ctx.JSON(404, gin.H{"error": "transcoder not found"})
+	manifest, err := TranscodeManifestController(&user, uuid)
+	if err != nil {
+		ctx.JSON(400, gin.H{"error": err.Error()})
 		return
+	}
+	ctx.Data(200, "text/plain", manifest)
+}
+func TranscodeManifestController(user *engine.User, uuid string) ([]byte, error) {
+	transcoder := user.GetTranscode(uuid)
+	if transcoder == nil {
+		return nil, errors.New("transcoder not found")
 	}
 	channel := make(chan string)
 	go transcoder.Manifest(channel)
-	ctx.Data(200, "application/x-mpegURL", []byte(<-channel))
+	manifest := <-channel
+	return []byte(manifest), nil
 }
-
 func TranscodeSubtitle(ctx *gin.Context, db *gorm.DB) {
 	user, err := engine.GetUser(db, ctx, []string{})
 	if err != nil {
 		ctx.JSON(401, gin.H{"error": "not logged in"})
 		return
 	}
-	fmt.Println("-------- SUBTITLE ---------", ctx.Param("uuid"))
-	number := ctx.Param("index")
+	uuid := ctx.Param("uuid")
+	index := ctx.Param("index")
+	reader, err := TranscodeSubtitleController(&user, uuid, index)
+	if err != nil {
+		ctx.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.DataFromReader(200, -1, "text/vtt", reader, nil)
+}
+func TranscodeSubtitleController(user *engine.User, uuid string, index string) (io.Reader, error) {
+
+	number := index
 	var intIndex int
 	if _, err := fmt.Sscanf(number, "%d", &intIndex); err != nil {
-		ctx.JSON(400, gin.H{"error": "invalid subtitle index"})
-		return
+		return nil, errors.New("invalid number")
 	}
-	transcoder := user.GetTranscode(ctx.Param("uuid"))
+	transcoder := user.GetTranscode(uuid)
 	if transcoder == nil {
-		ctx.JSON(
-			404,
-			gin.H{"error": "transcoder not found"},
-		)
-		return
+		return nil, errors.New("transcoder not found")
 	}
 	if transcoder.ISLIVESTREAM {
-		ctx.JSON(404, gin.H{"error": "subtitle not found"})
-		return
+		return nil, errors.New("live stream")
 	}
 	result := make(chan io.Reader, 1)
 	go transcoder.GetSubtitle(intIndex, result)
 	reader := <-result
 	if reader == nil {
-		ctx.JSON(404, gin.H{"error": "subtitle not found"})
-		return
+		return nil, errors.New("subtitle not found")
 	}
-	ctx.DataFromReader(200, -1, "text/vtt", reader, map[string]string{})
+	return reader, nil
 }
 
 // watching -> Preload movie, Episode, tv, tv.season, tv.season.episodes, user, episode.season
 // must preload -> movie.genre; tv.genre; tv.seasons
-
-type EpiNumber struct {
-	SEASON  int
-	EPISODE int
-}

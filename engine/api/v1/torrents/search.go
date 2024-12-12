@@ -13,22 +13,14 @@ import (
 
 var ItemsTorrents map[string]*engine.Torrent_File = make(map[string]*engine.Torrent_File)
 
-func SearchTorrents(ctx *gin.Context, db *gorm.DB) {
-	user, err := engine.GetUser(db, ctx, []string{})
-	if err != nil {
-		ctx.JSON(401, gin.H{"error": "not logged in"})
-		return
-	}
+func SearchTorrentsController(db *gorm.DB, user *engine.User, query string, metadata string) (*[]TorrentItemRender, error) {
 	if !user.ADMIN {
-		ctx.JSON(401, gin.H{"error": "not admin"})
-		return
+		return nil, fmt.Errorf("not allowed")
 	}
-	query := ctx.Query("q")
 	if query == "" {
-		ctx.JSON(400, gin.H{"error": "no query"})
-		return
+		return nil, fmt.Errorf("empty query")
 	}
-	fetchWithMetadata := ctx.Query("metadata") == "true"
+	fetchWithMetadata := metadata == "true"
 	items := make(chan []*engine.Torrent_File, 1)
 	var wgp sync.WaitGroup
 	wgp.Add(1)
@@ -53,7 +45,7 @@ func SearchTorrents(ctx *gin.Context, db *gorm.DB) {
 			res = append(res, *item)
 		}
 	}
-	ctx.JSON(200, gin.H{"torrents": res})
+	return &res, nil
 }
 func MapTorrentItem(item *engine.Torrent_File, wg *sync.WaitGroup, channel chan *TorrentItemRender, withMetadata bool) {
 	defer wg.Done()
@@ -91,6 +83,22 @@ func MapTorrentItem(item *engine.Torrent_File, wg *sync.WaitGroup, channel chan 
 		escape.Size = wmtdt.Size
 	}
 	channel <- escape
+}
+
+func SearchTorrents(ctx *gin.Context, db *gorm.DB) {
+	user, err := engine.GetUser(db, ctx, []string{})
+	if err != nil {
+		ctx.JSON(401, gin.H{"error": "not logged in"})
+		return
+	}
+	query := ctx.Query("query")
+	metadata := ctx.Query("metadata")
+	d, err := SearchTorrentsController(db, &user, query, metadata)
+	if err != nil {
+		ctx.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(200, d)
 }
 
 type TorrentItemRender struct {
