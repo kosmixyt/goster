@@ -41,15 +41,9 @@ type EpisodeMetadata struct {
 	FILES  []FILEMetadata `json:"files"`
 }
 
-func GetUnAssignedMedias(ctx *gin.Context, db *gorm.DB) {
-	user, err := engine.GetUser(db, ctx, []string{})
-	if err != nil {
-		ctx.JSON(401, gin.H{"error": "not logged in"})
-		return
-	}
+func GetUnAssignedMediasController(user *engine.User, db *gorm.DB) (*DraggerData, error) {
 	if !user.CAN_EDIT {
-		ctx.JSON(403, gin.H{"error": "forbidden"})
-		return
+		return nil, fmt.Errorf("forbidden")
 	}
 	var movies []engine.MOVIE
 	var tvs []engine.TV
@@ -112,13 +106,10 @@ func GetUnAssignedMedias(ctx *gin.Context, db *gorm.DB) {
 					f := FILEMetadata{ID: (file.ID), NAME: file.FILENAME, PATH: engine.Joins(file.ROOT_PATH, file.SUB_PATH), SIZE: (file.SIZE)}
 					e.FILES[c] = f
 				}
-				// s.Episodes = append(s.Episodes, e)
 				s.Episodes[b] = e
 			}
-			// t.SEASONS = append(t.SEASONS, s)
 			t.SEASONS[a] = s
 		}
-		// tvsres = append(tvsres, t)
 		tvsres[j] = t
 
 	}
@@ -128,59 +119,63 @@ func GetUnAssignedMedias(ctx *gin.Context, db *gorm.DB) {
 	for i, file := range orphans {
 		orphansres[i] = FILEMetadata{ID: (file.ID), NAME: file.FILENAME, PATH: engine.Joins(file.ROOT_PATH, file.SUB_PATH), SIZE: (file.SIZE)}
 	}
-	ctx.JSON(200, gin.H{"movies": moviesres, "tvs": tvsres, "orphans": orphansres})
+	return &DraggerData{Movies: moviesres, Tvs: tvsres, Orphans: orphansres}, nil
 
 }
 
-func GetDraggerData(ctx *gin.Context, db *gorm.DB) {}
+type DraggerData struct {
+	Movies  []MovieMetadata `json:"movies"`
+	Tvs     []TvMetadata    `json:"tvs"`
+	Orphans []FILEMetadata  `json:"orphans"`
+}
 
-func AssignFileToMedia(ctx *gin.Context, db *gorm.DB) {
+func GetUnAssignedMedias(ctx *gin.Context, db *gorm.DB) {
 	user, err := engine.GetUser(db, ctx, []string{})
 	if err != nil {
 		ctx.JSON(401, gin.H{"error": "not logged in"})
 		return
 	}
-	if !user.CAN_EDIT {
-		ctx.JSON(403, gin.H{"error": "forbidden"})
+	data, err := GetUnAssignedMediasController(&user, db)
+	if err != nil {
+		ctx.JSON(403, gin.H{"error": err.Error()})
 		return
 	}
-	fileId, err := strconv.Atoi(ctx.PostForm("fileid"))
+	ctx.JSON(200, data)
+}
+
+func AssignFileToMediaController(user *engine.User, db *gorm.DB, fileIdstr string, ntype string, id string, season_id_str string, episode_id_str string) error {
+	if !user.CAN_EDIT {
+		return fmt.Errorf("forbidden")
+	}
+	fileId, err := strconv.Atoi(fileIdstr)
 	if err != nil {
-		ctx.JSON(400, gin.H{"error": "invalid fileid"})
-		return
+		return fmt.Errorf("invalid fileid")
 	}
 	var file engine.FILE
 	db.Where("id = ?", fileId).First(&file)
 	if file.ID == 0 {
-		ctx.JSON(404, gin.H{"error": "file not found"})
-		return
+		return fmt.Errorf("file not found")
 	}
-	ntype, id := ctx.PostForm("type"), ctx.PostForm("id")
 	if ntype == engine.Tv {
 		tvDbItem, err := engine.Get_tv_via_provider(id, true, user.RenderTvPreloads)
 		if err != nil {
-			ctx.JSON(400, gin.H{"error": err.Error()})
-			return
+			return err
 		}
-		season_id, err := strconv.Atoi(ctx.PostForm("season_id"))
+		season_id, err := strconv.Atoi(season_id_str)
 		if err != nil {
-			ctx.JSON(400, gin.H{"error": "invalid season_id"})
-			return
+			return fmt.Errorf("invalid season_id")
 		}
-		episode_id, err := strconv.Atoi(ctx.PostForm("episode_id"))
+		episode_id, err := strconv.Atoi(episode_id_str)
 		if err != nil {
-			ctx.JSON(400, gin.H{"error": "invalid episode_id"})
-			return
+			return fmt.Errorf("invalid episode_id")
 		}
 		s := tvDbItem.GetExistantSeasonById(uint(season_id))
 		if s == nil {
-			ctx.JSON(400, gin.H{"error": "season not found"})
-			return
+			return fmt.Errorf("season not found")
 		}
 		e := s.GetExistantEpisodeById(uint(episode_id))
 		if e == nil {
-			ctx.JSON(400, gin.H{"error": "episode not found"})
-			return
+			return fmt.Errorf("episode not found")
 		}
 		db.Updates(&engine.FILE{ID: file.ID, TV_ID: tvDbItem.ID, EPISODE_ID: e.ID, SEASON_ID: s.ID}).
 			Update("movie_id", gorm.Expr("null")).
@@ -188,8 +183,7 @@ func AssignFileToMedia(ctx *gin.Context, db *gorm.DB) {
 	} else if ntype == engine.Movie {
 		movie, err := engine.Get_movie_via_provider(id, true, user.RenderMoviePreloads)
 		if err != nil {
-			ctx.JSON(400, gin.H{"error": err.Error()})
-			return
+			return err
 		}
 		db.
 			Updates(&engine.FILE{ID: file.ID, MOVIE_ID: movie.ID}).
@@ -206,21 +200,24 @@ func AssignFileToMedia(ctx *gin.Context, db *gorm.DB) {
 			Update("movie_id", gorm.Expr("null")).
 			Where("id = ?", file.ID)
 	} else {
-		ctx.JSON(400, gin.H{"error": "invalid type"})
-		return
+		return fmt.Errorf("invalid type")
 	}
-	ctx.JSON(200, gin.H{"message": "ok"})
-
+	return nil
 }
-func ClearMoviesWithNoMediaAndNoTmdbId(ctx *gin.Context, db *gorm.DB) {
+func AssignFileToMedia(ctx *gin.Context, db *gorm.DB) {
 	user, err := engine.GetUser(db, ctx, []string{})
 	if err != nil {
 		ctx.JSON(401, gin.H{"error": "not logged in"})
 		return
 	}
+	err = AssignFileToMediaController(&user, db, ctx.PostForm("file_id"), ctx.PostForm("type"), ctx.PostForm("id"), ctx.PostForm("season_id"), ctx.PostForm("episode_id"))
+	if err != nil {
+		ctx.JSON(500, gin.H{"error": err.Error()})
+	}
+}
+func ClearMoviesWithNoMediaAndNoTmdbIdController(db *gorm.DB, user *engine.User) (string, error) {
 	if !user.ADMIN {
-		ctx.JSON(403, gin.H{"error": "forbidden"})
-		return
+		return "", fmt.Errorf("forbidden")
 	}
 	var movies []engine.MOVIE
 	db.Preload("FILES").Where("tmdb_id = ?", -1).Find(&movies)
@@ -228,55 +225,60 @@ func ClearMoviesWithNoMediaAndNoTmdbId(ctx *gin.Context, db *gorm.DB) {
 	for _, movie := range movies {
 		if len(movie.FILES) == 0 {
 			if tx := db.Delete(&movie); tx.Error != nil {
-				ctx.JSON(500, gin.H{"error": tx.Error.Error()})
-				return
+				return "", tx.Error
 			}
 			deleted++
 		}
 	}
-	ctx.JSON(200, gin.H{"message": "deleted " + strconv.Itoa(deleted) + " movies"})
+	return "deleted " + strconv.Itoa(deleted) + " movies", nil
+}
+func ClearMoviesWithNoMediaAndNoTmdbId(ctx *gin.Context, db *gorm.DB) {
+	user, err := engine.GetUser(db, ctx, []string{})
+	if err != nil {
+		ctx.JSON(401, gin.H{"error": "not logged in"})
+		return
+	}
+	msg, err := ClearMoviesWithNoMediaAndNoTmdbIdController(db, &user)
+	if err != nil {
+		ctx.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(200, gin.H{"message": msg})
 }
 
-// rename strategy
-// func RenameAllFiles(ctx *gin.Context, db *gorm.DB) {
-// 	user, err := engine.GetUser(db, ctx, []string{})
-// 	if err != nil {
-// 		ctx.JSON(401, gin.H{"error": "not logged in"})
-// 		return
-// 	}
-// }
-
+func BulkSerieMoveController(user *engine.User, db *gorm.DB, source_id_str string, target_id_str string) error {
+	if !user.CAN_EDIT {
+		return fmt.Errorf("forbidden")
+	}
+	source_id := source_id_str
+	target_id := target_id_str
+	fmt.Println("source_id", source_id, "target_id", target_id)
+	source, err := engine.Get_tv_via_provider(source_id, true, user.RenderTvPreloads)
+	if err != nil {
+		return err
+	}
+	target, err := engine.Get_tv_via_provider(target_id, true, user.RenderTvPreloads)
+	if err != nil {
+		return err
+	}
+	if source.ID == target.ID {
+		return fmt.Errorf("source and target are the same")
+	}
+	if err := source.MoveFiles(target); err != nil {
+		return err
+	}
+	return nil
+}
 func BulkSerieMove(ctx *gin.Context, db *gorm.DB) {
 	user, err := engine.GetUser(db, ctx, []string{})
 	if err != nil {
 		ctx.JSON(401, gin.H{"error": "not logged in"})
 		return
 	}
-	if !user.CAN_EDIT {
-		ctx.JSON(403, gin.H{"error": "forbidden"})
-		return
-	}
-	source_id := ctx.PostForm("source_id")
-	target_id := ctx.PostForm("target_id")
-	fmt.Println("source_id", source_id, "target_id", target_id)
-	source, err := engine.Get_tv_via_provider(source_id, true, user.RenderTvPreloads)
+	err = BulkSerieMoveController(&user, db, ctx.PostForm("source_id"), ctx.PostForm("target_id"))
 	if err != nil {
-		ctx.JSON(400, gin.H{"error": err.Error()})
-		return
-	}
-	target, err := engine.Get_tv_via_provider(target_id, true, user.RenderTvPreloads)
-	if err != nil {
-		ctx.JSON(400, gin.H{"error": err.Error()})
-		return
-	}
-	if source.ID == target.ID {
-		ctx.JSON(400, gin.H{"error": "source and target are the same"})
-		return
-	}
-	if err := source.MoveFiles(target); err != nil {
 		ctx.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
 	ctx.JSON(200, gin.H{"message": "ok"})
-
 }

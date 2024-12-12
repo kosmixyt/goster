@@ -19,52 +19,38 @@ type AddRecordPayload struct {
 	StorerOutput string `json:"storer_output"`
 }
 
-func AddRecord(ctx *gin.Context, db *gorm.DB) {
-	user, err := engine.GetUser(db, ctx, []string{})
-	if err != nil {
-		ctx.JSON(401, gin.H{"error": "not logged in"})
-		return
-	}
+func AddRecordController(user *engine.User, payload AddRecordPayload, db *gorm.DB) error {
 	if !user.CAN_TRANSCODE {
-		ctx.JSON(401, gin.H{"error": "not allowed to record"})
-		return
+		return engine.ErrorCannotRecord
 	}
-	var payload AddRecordPayload
-	if err := ctx.BindJSON(&payload); err != nil {
-		ctx.JSON(400, gin.H{"error": "invalid payload"})
-		return
-	}
+
 	task := user.CreateTask("Record IPTV", func() error { panic("unimplementd") })
 	userChannel := user.GetUserChannel(int(payload.ChannelId))
 	if userChannel == nil {
 		task.SetAsError("channel not found")
-		ctx.JSON(400, gin.H{"error": "channel not found"})
-		return
+		return engine.ErrorChannelNotFound
 	}
 	var episode engine.EPISODE
 	var movie engine.MOVIE
 	if payload.OutputType == "episode" {
 		if db.Where("id = ?", payload.OutputId).First(&episode).Error != nil {
 			task.SetAsError("episode not found")
-			ctx.JSON(400, gin.H{"error": "episode not found"})
-			return
+			return engine.ErrorEpisodeNotFound
 		}
 	} else if payload.OutputType == "movie" {
 		if db.Where("id = ?", payload.OutputId).First(&movie).Error != nil {
 			task.SetAsError("movie not found")
-			ctx.JSON(400, gin.H{"error": "movie not found"})
-			return
+			return engine.ErrorMovieNotFound
 		}
 	} else {
 		task.SetAsError("output_type must be episode or movie")
-		ctx.JSON(400, gin.H{"error": "output_type must be episode or movie"})
-		return
+		// ctx.JSON(400, gin.H{"error": "output_type must be episode or movie"})
+		return engine.ErrorInvalidOutputType
 	}
 	storer, path, err := engine.ParsePath(payload.StorerOutput)
 	if err != nil {
 		task.SetAsError(err)
-		ctx.JSON(400, gin.H{"error": err.Error()})
-		return
+		return err
 	}
 	record := engine.Record{
 		START:                time.Unix(0, payload.Start*int64(time.Millisecond)),
@@ -90,7 +76,39 @@ func AddRecord(ctx *gin.Context, db *gorm.DB) {
 	}
 	db.Preload("OWNER").Save(&record)
 	go record.Init()
-	ctx.JSON(200, gin.H{"record": record})
+	return nil
+}
+
+func AddRecord(ctx *gin.Context, db *gorm.DB) {
+	user, err := engine.GetUser(db, ctx, []string{})
+	if err != nil {
+		ctx.JSON(401, gin.H{"error": "not logged in"})
+		return
+	}
+	var payload AddRecordPayload
+	if err := ctx.BindJSON(&payload); err != nil {
+		ctx.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	if err := AddRecordController(&user, payload, db); err != nil {
+		ctx.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+}
+
+func RemoveRecordController(record_id string, db *gorm.DB) error {
+	recordId, err := strconv.ParseInt(record_id, 10, 64)
+	if err != nil {
+		return err
+	}
+	var record engine.Record
+	if db.Where("id = ?", recordId).First(&record).Error != nil {
+		return engine.ErrorRecordNotFound
+	}
+	if err := db.Delete(&record).Error; err != nil {
+		return err
+	}
+	return nil
 }
 
 func RemoveRecord(ctx *gin.Context, db *gorm.DB) {
@@ -99,17 +117,9 @@ func RemoveRecord(ctx *gin.Context, db *gorm.DB) {
 		ctx.JSON(401, gin.H{"error": "not logged in"})
 		return
 	}
-	record_id := ctx.PostForm("record_id")
-	recordId, err := strconv.ParseInt(record_id, 10, 64)
-	if err != nil {
-		ctx.JSON(400, gin.H{"error": "record_id must be an integer"})
+	if err := RemoveRecordController(ctx.Param("record_id"), db); err != nil {
+		ctx.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	var record engine.Record
-	if db.Where("id = ?", recordId).First(&record).Error != nil {
-		ctx.JSON(400, gin.H{"error": "record not found"})
-		return
-	}
-	db.Delete(&record)
-	ctx.JSON(200, gin.H{"record": record})
+
 }

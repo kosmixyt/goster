@@ -1,6 +1,8 @@
 package torrents
 
 import (
+	"errors"
+	"io"
 	"path"
 	"strconv"
 
@@ -11,37 +13,48 @@ import (
 	"kosmix.fr/streaming/kosmixutil"
 )
 
-func TorrentFileDownload(ctx *gin.Context, db *gorm.DB) {
-	user, err := engine.GetUser(db, ctx, []string{})
+type FileReturn struct {
+	FileName string
+	Reader   io.ReadSeekCloser
+	Size     int64
+}
+
+func TorrentFileDownloadController(user *engine.User, torrent_id string, index_str string, db *gorm.DB) (*FileReturn, error) {
+	torrentId, err := strconv.Atoi(torrent_id)
 	if err != nil {
-		ctx.JSON(401, gin.H{"error": "not logged in"})
-		return
-	}
-	torrentId, err := strconv.Atoi(ctx.Query("id"))
-	if err != nil {
-		ctx.JSON(400, gin.H{"error": "invalid id"})
-		return
+		return nil, err
 	}
 	torrent := user.GetUserTorrent(uint(torrentId))
 	if torrent == nil {
-		ctx.JSON(404, gin.H{"error": "torrent not found"})
-		return
+		return nil, errors.New("torrent not found")
 	}
-	index, err := strconv.Atoi(ctx.Query("index"))
+	index, err := strconv.Atoi(index_str)
 	if err != nil {
-		ctx.JSON(400, gin.H{"error": "invalid index"})
-		return
+		return nil, err
 	}
 	if index >= len(torrent.Torrent.Files()) || index < 0 {
-		ctx.JSON(400, gin.H{"error": "invalid index"})
-		return
+		return nil, errors.New("file not found")
 	}
 	file := torrent.Torrent.Files()[index]
 	file.Torrent().AllowDataDownload()
 
 	file.SetPriority(types.PiecePriorityNow)
 	fileName := path.Base(file.DisplayPath())
-	ctx.Header("Content-Disposition", "attachment; filename="+fileName)
-	kosmixutil.ServerRangeRequest(ctx, file.Length(), file.NewReader(), true, true)
-
+	return &FileReturn{fileName, file.NewReader(), file.Length()}, nil
+}
+func TorrentFileDownload(ctx *gin.Context, db *gorm.DB) {
+	user, err := engine.GetUser(db, ctx, []string{})
+	if err != nil {
+		ctx.JSON(401, gin.H{"error": "not logged in"})
+		return
+	}
+	torrent_id := ctx.Param("torrent_id")
+	index := ctx.Param("index")
+	file, err := TorrentFileDownloadController(&user, torrent_id, index, db)
+	if err != nil {
+		ctx.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.Header("Content-Disposition", "attachment; filename="+file.FileName)
+	kosmixutil.ServerRangeRequest(ctx, file.Size, file.Reader, true, true)
 }

@@ -9,12 +9,8 @@ import (
 	engine "kosmix.fr/streaming/engine/app"
 )
 
-func HandleMe(db *gorm.DB, ctx *gin.Context) {
-	user, err := engine.GetUser(db, ctx, []string{"SHARES", "SHARES.FILE", "Requests", "Requests.TV", "Requests.TV_SEASON", "Requests.Movie", "Requests.TORRENT"})
-	if err != nil {
-		ctx.JSON(401, gin.H{"error": err.Error()})
-		return
-	}
+func HandleMeController(user *engine.User, db *gorm.DB) (*Me, error) {
+
 	var Requests []Me_request = make([]Me_request, 0)
 	for _, request := range user.Requests {
 		creq := Me_request{
@@ -71,8 +67,7 @@ func HandleMe(db *gorm.DB, ctx *gin.Context) {
 			Preload("FILES.MOVIE").
 			Preload("FILES.SEASON").
 			First(&torrentDbItem).Error; err != nil {
-			ctx.JSON(500, gin.H{"error": err.Error()})
-			return
+			return nil, err
 		}
 		stats := t.Torrent.Stats()
 		item := tlItem{
@@ -91,10 +86,6 @@ func HandleMe(db *gorm.DB, ctx *gin.Context) {
 			Added:           torrentDbItem.CreatedAt.Unix(),
 		}
 		if item.MediaOutput == engine.Tv {
-			// if torrentDbItem.FILES[0].TV == nil {
-			// 	fmt.Println(torrentDbItem.FILES[0].ID, torrentDbItem.FILES[0].TV_ID)
-			// 	panic("tv is nil")
-			// }
 			for _, f := range torrentDbItem.FILES {
 				if f.TV != nil && f.IS_MEDIA {
 					item.SKINNY = f.TV.Skinny(nil)
@@ -143,7 +134,7 @@ func HandleMe(db *gorm.DB, ctx *gin.Context) {
 	convertsRender := make([]ConvertRender, len(converts))
 	for i, convert := range converts {
 		convertsRender[i] = ConvertRender{
-			SOURCE:          convert.SOURCE_FILE.SkinnyRender(&user),
+			SOURCE:          convert.SOURCE_FILE.SkinnyRender(user),
 			Quality:         convert.Quality.Name,
 			Task_id:         convert.Task.ID,
 			AudioTrackIndex: convert.AudioTrackIndex,
@@ -162,7 +153,7 @@ func HandleMe(db *gorm.DB, ctx *gin.Context) {
 		}
 	}
 
-	ctx.JSON(200, Me{
+	return &Me{
 		ID:                  user.ID,
 		Username:            user.NAME,
 		Converts:            convertsRender,
@@ -175,7 +166,16 @@ func HandleMe(db *gorm.DB, ctx *gin.Context) {
 		CurrentUploadSize:   uint(user.CURRENT_UPLOAD_SIZE),
 		AllowedTranscode:    uint(user.MAX_TRANSCODING),
 		CurrentTranscode:    uint(user.TRANSCODING),
-	})
+	}, nil
+}
+
+func HandleMe(ctx *gin.Context, db *gorm.DB) {
+	user, err := engine.GetUser(db, ctx, []string{"SHARES", "SHARES.FILE", "Requests", "Requests.TV", "Requests.TV_SEASON", "Requests.Movie", "Requests.TORRENT"})
+	if err != nil {
+		ctx.JSON(401, gin.H{"error": err.Error()})
+		return
+	}
+	HandleMeController(&user, db)
 }
 
 type Me struct {

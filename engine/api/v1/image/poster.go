@@ -8,24 +8,15 @@ import (
 	engine "kosmix.fr/streaming/engine/app"
 )
 
-func HandlePoster(ctx *gin.Context, db *gorm.DB) {
-	source_type := ctx.Query("type")
-	source_id := ctx.Query("id")
-	target_image := ctx.Query("image")
-	quality := ctx.Query("quality")
+func HandlePosterController(source_type string, source_id string, target_image string, quality string, db *gorm.DB) ([]byte, error) {
+
 	if slices.Contains([]string{"low", "high"}, quality) == false {
-		ctx.JSON(400, gin.H{
-			"error": "Invalid quality",
-		})
-		return
+		return nil, engine.ErrorInvalidQuality
 	}
 	if source_type == engine.Tv {
 		tv, err := engine.Get_tv_via_provider(source_id, false, func() *gorm.DB { return db })
 		if err != nil {
-			ctx.JSON(500, gin.H{
-				"error": err.Error(),
-			})
-			return
+			return nil, err
 		}
 		var data []byte
 		switch target_image {
@@ -42,25 +33,16 @@ func HandlePoster(ctx *gin.Context, db *gorm.DB) {
 			data = rtmp
 			err = etmp
 		default:
-			ctx.JSON(400, gin.H{
-				"error": "Invalid image",
-			})
-			return
+			return nil, engine.ErrorInvalidImage
 		}
 		if err != nil {
-			ctx.JSON(500, gin.H{
-				"error": err.Error(),
-			})
-			return
+			return nil, err
 		}
-		ctx.Data(200, "image/jpeg", data)
+		return data, nil
 	} else if source_type == engine.Movie {
 		movie, err := engine.Get_movie_via_provider(source_id, false, func() *gorm.DB { return db })
 		if err != nil {
-			ctx.JSON(500, gin.H{
-				"error": err.Error(),
-			})
-			return
+			return nil, err
 		}
 		var data []byte
 		switch target_image {
@@ -78,23 +60,32 @@ func HandlePoster(ctx *gin.Context, db *gorm.DB) {
 			err = etmp
 
 		default:
-			ctx.JSON(400, gin.H{
-				"error": "Invalid image",
-			})
-			return
+			return nil, engine.ErrorInvalidImage
 		}
 		if err != nil {
-			ctx.JSON(500, gin.H{
-				"error": err.Error(),
-			})
-			return
+			return nil, err
 		}
-		ctx.Data(200, "image/jpeg", data)
+		return data, nil
 	} else {
-		ctx.JSON(400, gin.H{
-			"error": "Invalid type",
-		})
-		return
+		return nil, engine.ErrorInvalidMediaType
 	}
 
+}
+
+func HandlePoster(ctx *gin.Context, db *gorm.DB) {
+	_, err := engine.GetUser(db, ctx, []string{})
+	if err != nil {
+		ctx.JSON(401, gin.H{"error": "not logged in"})
+		return
+	}
+	source_type := ctx.Query("type")
+	source_id := ctx.Query("id")
+	target_image := ctx.Query("target")
+	quality := ctx.Query("quality")
+	if data, err := HandlePosterController(source_type, source_id, target_image, quality, db); err != nil {
+		ctx.JSON(400, gin.H{"error": err.Error()})
+		return
+	} else {
+		ctx.Data(200, "image/png", data)
+	}
 }

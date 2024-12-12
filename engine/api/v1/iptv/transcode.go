@@ -41,7 +41,6 @@ func TranscodeIptv(ctx *gin.Context, db *gorm.DB) {
 	if err := TranscodeIptvController(db, &user, ctx.Query("channel"), SendEvent, ctx.Writer.CloseNotify()); err != nil {
 		SendEvent(engine.ServerSideError, err.Error())
 	}
-
 }
 
 func TranscodeIptvController(db *gorm.DB, user *engine.User, channelIdStr string, on_progress func(string, string), stop <-chan bool) error {

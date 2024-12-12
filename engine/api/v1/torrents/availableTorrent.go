@@ -12,58 +12,42 @@ import (
 	"kosmix.fr/streaming/kosmixutil"
 )
 
-func AvailableTorrent(ctx *gin.Context, db *gorm.DB) {
-	user, err := engine.GetUser(db, ctx, []string{})
-	if err != nil {
-		ctx.JSON(401, gin.H{"error": "not logged in"})
-		return
-	}
-	itype := ctx.Query("type")
-	id := ctx.Query("id")
+func AvailableTorrentController(user *engine.User, db *gorm.DB, id string, itype string, season_id string) ([]TorrentItemRender, error) {
 	var items []*engine.Torrent_File
 	start := time.Now()
-
 	if itype == engine.Tv {
 		tvDbItem, err := engine.Get_tv_via_provider(id, true, user.RenderTvPreloads)
 		if err != nil {
-			ctx.JSON(400, gin.H{"error": err.Error()})
-			return
+			return nil, err
 		}
-		season_id, err := strconv.Atoi(ctx.Query("season"))
+		season_id, err := strconv.Atoi(season_id)
 		if err != nil {
-			ctx.JSON(400, gin.H{"error": err.Error()})
-			return
+			return nil, err
 		}
 		season := tvDbItem.GetExistantSeasonById(uint(season_id))
 		if season.HasFile() {
-			ctx.JSON(400, gin.H{"error": "season already downloaded"})
-			return
+			return nil, fmt.Errorf("season already downloaded")
 		}
 		preferedOrderedProvider, err := engine.FindBestTorrentFor(tvDbItem, nil, season, nil, 1, engine.GetMaxSize(engine.Movie))
 		if err != nil {
-			ctx.JSON(400, gin.H{"error": err.Error()})
-			return
+			return nil, err
 		}
 		items = preferedOrderedProvider
 	} else if itype == engine.Movie {
 		movie, err := engine.Get_movie_via_provider(id, true, user.RenderMoviePreloads)
 		if err != nil {
-			ctx.JSON(400, gin.H{"error": err.Error()})
-			return
+			return nil, err
 		}
 		if movie.HasFile(nil) {
-			ctx.JSON(400, gin.H{"error": "movie already downloaded"})
-			return
+			return nil, fmt.Errorf("movie already downloaded")
 		}
 		preferedOrderedProvider, err := engine.FindBestTorrentFor(nil, movie, nil, nil, 1, engine.GetMaxSize(engine.Movie))
 		if err != nil {
-			ctx.JSON(400, gin.H{"error": err.Error()})
-			return
+			return nil, err
 		}
 		items = preferedOrderedProvider
 	} else {
-		ctx.JSON(400, gin.H{"error": "no type"})
-		return
+		return nil, fmt.Errorf("type not found")
 	}
 	var wg sync.WaitGroup
 	v := make(chan *TorrentItemRender, len(items))
@@ -83,5 +67,21 @@ func AvailableTorrent(ctx *gin.Context, db *gorm.DB) {
 			res = append(res, *item)
 		}
 	}
-	ctx.JSON(200, gin.H{"torrents": res})
+	return res, nil
+}
+
+func AvailableTorrents(ctx *gin.Context, db *gorm.DB) {
+	user, err := engine.GetUser(db, ctx, []string{})
+	if err != nil {
+		ctx.JSON(401, gin.H{"error": "not logged in"})
+		return
+	}
+	itype := ctx.Query("type")
+	id := ctx.Query("id")
+	season_id := ctx.Query("season")
+	if data, err := AvailableTorrentController(&user, db, id, itype, season_id); err != nil {
+		ctx.JSON(400, gin.H{"error": err.Error()})
+	} else {
+		ctx.JSON(200, gin.H{"success": data})
+	}
 }

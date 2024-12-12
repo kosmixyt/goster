@@ -14,14 +14,14 @@ func Browse(ctx *gin.Context, db *gorm.DB) {
 		ctx.JSON(401, gin.H{"error": "not logged in"})
 		return
 	}
-	data, err := Browser(db, &user, ctx.Query("genre"), ctx.Query("type"), ctx.Query("provider"))
+	data, err := BrowseController(db, &user, ctx.Query("genre"), ctx.Query("type"), ctx.Query("provider"))
 	if err == nil {
 		ctx.JSON(200, gin.H{"elements": data})
 		return
 	}
 	ctx.JSON(400, gin.H{"error": err.Error()})
 }
-func Browser(db *gorm.DB, user *engine.User, genre string, itype string, provider string) ([]engine.SKINNY_RENDER, error) {
+func BrowseController(db *gorm.DB, user *engine.User, genre string, itype string, provider string) ([]engine.SKINNY_RENDER, error) {
 	if genre != "" {
 		var idgenre int
 		_, err := fmt.Sscanf(genre, "%d", &idgenre)

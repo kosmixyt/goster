@@ -23,7 +23,6 @@ func NewDownloadRequest(db *gorm.DB, ctx *gin.Context) {
 	}
 
 }
-
 func DeleteRequest(db *gorm.DB, ctx *gin.Context) {
 	user, err := engine.GetUser(db, ctx, []string{"Requests"})
 	if err != nil {

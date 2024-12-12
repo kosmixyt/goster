@@ -17,7 +17,7 @@ func Landing(db *gorm.DB, ctx *gin.Context) {
 		ctx.JSON(401, gin.H{"error": "not logged in"})
 		return
 	}
-	recents, lines, channelsProvider, err := home_page(&user, db)
+	recents, lines, channelsProvider, err := LandingController(&user, db)
 	if err != nil {
 		ctx.JSON(400, gin.H{"error": err.Error()})
 		return
@@ -30,7 +30,7 @@ func Landing(db *gorm.DB, ctx *gin.Context) {
 	fmt.Println("time", time.Since(start))
 }
 
-func home_page(user *engine.User, db *gorm.DB) (*engine.Line_Render, []engine.Line_Render, []engine.Provider_Line, error) {
+func LandingController(user *engine.User, db *gorm.DB) (*engine.Line_Render, []engine.Line_Render, []engine.Provider_Line, error) {
 	recents := engine.GetRecent(db, *user)
 	var lines []engine.Line_Render = make([]engine.Line_Render, 0)
 	WATCHINGS := user.GetReworkedWatching()
@@ -43,8 +43,18 @@ func home_page(user *engine.User, db *gorm.DB) (*engine.Line_Render, []engine.Li
 	if len(BestGenres) > 10 {
 		BestGenres = BestGenres[:10]
 	}
+	mv, tvs := user.GetWatchList()
+	asSkinny := engine.MapMovieSkinny(mv)
+	asSkinny = append(asSkinny, engine.MapTvSkinny(tvs)...)
+	lines = append(lines,
+		engine.Line_Render{
+			Data:  asSkinny,
+			Title: "Watchlist",
+			Type:  "items",
+		},
+	)
 	lines = append(lines, lineOfGenre...)
-	countOfChannel := 3 + ((1 + len(BestGenres)) * len(engine.Config.Metadata.TmdbMovieWatchProviders))
+	countOfChannel := 2 + ((1 + len(BestGenres)) * len(engine.Config.Metadata.TmdbMovieWatchProviders))
 	channel := make(chan []engine.Line_Render, countOfChannel)
 	var wg sync.WaitGroup
 	channelsProvider := make(chan []engine.Provider_Line, 1)
@@ -64,20 +74,7 @@ func home_page(user *engine.User, db *gorm.DB) (*engine.Line_Render, []engine.Li
 			},
 		}
 	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		mv, tvs := user.GetWatchList()
-		asSkinny := engine.MapMovieSkinny(mv)
-		asSkinny = append(asSkinny, engine.MapTvSkinny(tvs)...)
-		channel <- []engine.Line_Render{
-			engine.Line_Render{
-				Data:  asSkinny,
-				Title: "Watchlist",
-				Type:  "items",
-			},
-		}
-	}()
+
 	wg.Add(1)
 	go engine.GetProviderRender(db, channelsProvider, &wg)
 	for name, providerId := range engine.Config.Metadata.TmdbMovieWatchProviders {

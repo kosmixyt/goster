@@ -10,36 +10,41 @@ import (
 	engine "kosmix.fr/streaming/engine/app"
 )
 
-func AddIptv(ctx *gin.Context, db *gorm.DB) {
-	user, err := engine.GetUser(db, ctx, []string{})
-	if err != nil {
-		ctx.JSON(401, gin.H{"error": "not logged in"})
-		return
-	}
+func AddIptvController(user *engine.User, url string) error {
 
-	reader, err := engine.GetIptvFileFromUrl(ctx.Query("url"))
+	reader, err := engine.GetIptvFileFromUrl(url)
 	if err != nil {
-		ctx.JSON(400, gin.H{"error": "invalid url"})
-		return
+		return err
 	}
 	full, err := io.ReadAll(reader)
 	if err != nil {
 		full = nil
-		ctx.JSON(400, gin.H{"error": "invalid url"})
-		return
+		return err
 	}
 	asStr := string(full)
 	fmt.Println("Got Full", len(asStr))
 	if err = engine.TestTextIptv(asStr); err != nil {
 		fmt.Println("Test Failed")
 		fmt.Println(err.Error())
-		ctx.Data(400, "text/plain", []byte(err.Error()))
-		return
+		return err
 	}
 	reader = io.NopCloser(strings.NewReader(asStr))
 	iptv, err := user.AddIptv(reader, 1)
+	if err != nil {
+		return err
+	}
 	fmt.Println("Got Iptv")
 	iptv.Init(&engine.Fid)
 	engine.AppendIptv(iptv)
-	ctx.JSON(200, gin.H{"success": "iptv added"})
+	return nil
+}
+func AddIptv(ctx *gin.Context, db *gorm.DB) {
+	user, err := engine.GetUser(db, ctx, []string{})
+	if err != nil {
+		return
+	}
+	if err := AddIptvController(&user, ctx.Query("url")); err != nil {
+		ctx.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
 }

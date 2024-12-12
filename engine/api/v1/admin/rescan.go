@@ -6,27 +6,33 @@ import (
 	engine "kosmix.fr/streaming/engine/app"
 )
 
+func RescanController(user *engine.User, channel chan error, db *gorm.DB) {
+	if !user.ADMIN {
+		channel <- engine.ErrorIsNotAdmin
+		return
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			channel <- engine.ErrorRescanFailed
+			return
+		}
+	}()
+
+	engine.Scan(engine.Config.Locations, db)
+}
+
 func Rescan(ctx *gin.Context, db *gorm.DB) {
 	user, err := engine.GetUser(db, ctx, []string{})
 	if err != nil {
 		ctx.JSON(401, gin.H{"error": "not logged in"})
 		return
 	}
-	if !user.ADMIN {
-		ctx.JSON(401, gin.H{"error": "not admin"})
+	channel := make(chan error)
+	go RescanController(&user, channel, db)
+	err = <-channel
+	if err != nil {
+		ctx.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	defer func() {
-		if r := recover(); r != nil {
-			ctx.JSON(500, gin.H{"error": "scan failed" + r.(string)})
-			return
-		}
-
-		ctx.JSON(
-			200,
-			gin.H{"status": "ok"},
-		)
-	}()
-
-	engine.Scan(engine.Config.Locations, db)
+	ctx.JSON(200, gin.H{"message": "ok"})
 }

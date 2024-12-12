@@ -1,6 +1,7 @@
 package torrents
 
 import (
+	"errors"
 	"strconv"
 
 	"github.com/anacrolix/torrent/types"
@@ -9,104 +10,78 @@ import (
 	engine "kosmix.fr/streaming/engine/app"
 )
 
-func TorrentAction(ctx *gin.Context, db *gorm.DB) {
-	user, err := engine.GetUser(db, ctx, []string{})
+func TorrentActionController(user *engine.User, torrent_id string, action string, deleteFiles string, fileIndex string, priority string, db *gorm.DB) error {
+
+	torrentId, err := strconv.Atoi(torrent_id)
 	if err != nil {
-		ctx.JSON(401, gin.H{"error": "not logged in"})
-		return
-	}
-	torrentId, err := strconv.Atoi(ctx.Query("id"))
-	if err != nil {
-		ctx.JSON(400, gin.H{"error": "invalid id"})
-		return
+		return err
 	}
 	torrent := user.GetUserTorrent(uint(torrentId))
 	if torrent == nil {
-		ctx.JSON(404, gin.H{"error": "torrent not found"})
-		return
+		return errors.New("torrent not found")
 	}
 	var torrentDbItem *engine.Torrent
 	if err := db.Where("id = ?", torrent.DB_ID).First(&torrentDbItem).Error; err != nil {
-		ctx.JSON(500, gin.H{"error": "could not find torrent in database"})
-		return
+		return err
 	}
-	action := ctx.Query("action")
 	switch action {
 	case "pause":
 		if torrentDbItem.Paused {
-			ctx.JSON(200, gin.H{"status": "already paused"})
-			return
+			return errors.New("torrent already paused")
 		}
 		torrent.Torrent.DisallowDataDownload()
 		torrent.Torrent.DisallowDataUpload()
 		torrentDbItem.Paused = true
 		if tx := db.Save(&torrentDbItem); tx.Error != nil {
-			ctx.JSON(500, gin.H{"status": "could not pause torrent"})
-			return
+			return tx.Error
 		}
-		ctx.JSON(200, gin.H{"status": "paused"})
 	case "resume":
 		if !torrentDbItem.Paused {
-			ctx.JSON(200, gin.H{"status": "already resumed"})
-			return
+			return errors.New("torrent already resumed")
 		}
 		torrent.Torrent.AllowDataDownload()
 		torrent.Torrent.AllowDataUpload()
 		torrentDbItem.Paused = false
 		if tx := db.Save(&torrentDbItem); tx.Error != nil {
-			ctx.JSON(500, gin.H{"status": "could not resume torrent"})
-			return
+			return tx.Error
 		}
-		ctx.JSON(200, gin.H{"status": "resumed"})
 	case "delete":
 		if !user.ADMIN {
-			ctx.JSON(403, gin.H{"error": "not allowed"})
-			return
+			return errors.New("not allowed")
 		}
-		if err := engine.CleanDeleteTorrent(ctx.Query("deleteFiles") == "true", torrent, db); err != nil {
-			ctx.JSON(500, gin.H{"error": "could not delete torrent" + err.Error()})
-			return
+		if err := engine.CleanDeleteTorrent(deleteFiles == "true", torrent, db); err != nil {
+			return err
 		}
-		ctx.JSON(200, gin.H{"success": "torrent deleted"})
 	case "recheck":
 		if !user.ADMIN {
-			ctx.JSON(403, gin.H{"error": "not allowed"})
-			return
+			return errors.New("not allowed")
 		}
 		go torrent.Torrent.VerifyData()
-		ctx.JSON(200, gin.H{"status": "rechecking"})
 	case "download":
 		if !user.ADMIN {
-			ctx.JSON(403, gin.H{"error": "not allowed"})
-			return
+			return errors.New("not allowed")
 		}
 		for _, file := range torrent.Torrent.Files() {
 			file.Download()
 		}
 		torrent.Torrent.DownloadAll()
-		ctx.JSON(200, gin.H{"status": "downloading"})
 	case "priority":
 		if !user.ADMIN {
-			ctx.JSON(403, gin.H{"error": "not allowed"})
-			return
+			return errors.New("not allowed")
 		}
-		fileIndex, err := strconv.Atoi(ctx.Query("fileIndex"))
+		fileIndex, err := strconv.Atoi(fileIndex)
 		if err != nil {
-			ctx.JSON(400, gin.H{"error": "invalid fileIndex"})
-			return
+			return err
 		}
-		priority, err := strconv.Atoi(ctx.Query("priority"))
+		priority, err := strconv.Atoi(priority)
 		if err != nil {
-			ctx.JSON(400, gin.H{"error": "invalid priority"})
-			return
+			return err
 		}
 		if fileIndex < 0 || fileIndex >= len(torrent.Torrent.Files()) {
-			ctx.JSON(400, gin.H{"error": "invalid fileIndex"})
-			return
+			return errors.New("invalid file index")
 		}
 		if priority < 0 || priority > 3 {
-			ctx.JSON(400, gin.H{"error": "invalid priority"})
-			return
+			return errors.New("invalid priority")
 		}
 		file := torrent.Torrent.Files()[fileIndex]
 		switch priority {
@@ -119,12 +94,27 @@ func TorrentAction(ctx *gin.Context, db *gorm.DB) {
 		case 3:
 			file.SetPriority(types.PiecePriorityNow)
 		default:
-			ctx.JSON(400, gin.H{"error": "invalid priority"})
-			return
+			return errors.New("invalid priority")
 		}
-		ctx.JSON(200, gin.H{"status": "priority set"})
-
 	default:
-		ctx.JSON(400, gin.H{"error": "invalid action"})
+		return errors.New("invalid action")
 	}
+	return nil
+}
+func TorrentsAction(ctx *gin.Context, db *gorm.DB) {
+	user, err := engine.GetUser(db, ctx, []string{})
+	if err != nil {
+		ctx.JSON(401, gin.H{"error": "not logged in"})
+		return
+	}
+	torrent_id := ctx.Param("torrent_id")
+	action := ctx.Param("action")
+	deleteFiles := ctx.Query("deleteFiles")
+	fileIndex := ctx.Query("fileIndex")
+	priority := ctx.Query("priority")
+	if err := TorrentActionController(&user, torrent_id, action, deleteFiles, fileIndex, priority, db); err != nil {
+		ctx.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(200, gin.H{"success": true})
 }

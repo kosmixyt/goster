@@ -197,3 +197,16 @@ func GetMinia(poster_image_path string, source_id int, source_type string, wante
 	}
 
 }
+
+var ErrorIsNotAdmin = fmt.Errorf("user is not admin")
+var ErrorInvalidAction = fmt.Errorf("invalid action")
+var ErrorRescanFailed = fmt.Errorf("rescan failed")
+var ErrorInvalidQuality = fmt.Errorf("invalid quality")
+var ErrorInvalidMediaType = fmt.Errorf("invalid media type")
+var ErrorInvalidImage = fmt.Errorf("invalid image")
+var ErrorCannotRecord = fmt.Errorf("cannot record")
+var ErrorChannelNotFound = fmt.Errorf("channel not found")
+var ErrorEpisodeNotFound = fmt.Errorf("episode not found")
+var ErrorMovieNotFound = fmt.Errorf("movie not found")
+var ErrorInvalidOutputType = fmt.Errorf("invalid output_type")
+var ErrorRecordNotFound = fmt.Errorf("record not found")
