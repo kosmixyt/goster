@@ -165,8 +165,8 @@ func Scan(locations []StorageElement, db *gorm.DB) {
 							}
 							TvInDb = tempTvDb
 						}
-						season := TvInDb.GetSeason(fileInDb.SeasonNumber(), true)
-						episode := season.GetEpisode(fileInDb.EpisodeNumber(), true)
+						season := TvInDb.GetSeason(fileInDb.SeasonNumber(), true, db)
+						episode := season.GetEpisode(fileInDb.EpisodeNumber(), true, db)
 						if season.ID == 0 || episode.ID == 0 {
 							panic("Episode not loaded from database")
 						}
@@ -174,8 +174,8 @@ func Scan(locations []StorageElement, db *gorm.DB) {
 						fileInDb.EPISODE_ID = episode.ID
 						fileInDb.TV_ID = TvInDb.ID
 					} else {
-						season := TvInDb.GetSeason(fileInDb.SeasonNumber(), true)
-						episode := season.GetEpisode(fileInDb.EpisodeNumber(), true)
+						season := TvInDb.GetSeason(fileInDb.SeasonNumber(), true, db)
+						episode := season.GetEpisode(fileInDb.EpisodeNumber(), true, db)
 						if season.ID != 0 && episode.ID == 0 {
 							fmt.Println(season.ID, episode.ID)
 							panic("Episode not found in database")

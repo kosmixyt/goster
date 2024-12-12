@@ -28,6 +28,8 @@ func CreateClient() {
 	var err error
 	defaultConfig := torrent.NewDefaultClientConfig()
 	defaultConfig.DisableIPv6 = true
+	// because it crashes
+	defaultConfig.EstablishedConnsPerTorrent = 75
 
 	defaultConfig.Seed = true
 	client, err = torrent.NewClient(defaultConfig)
@@ -211,7 +213,7 @@ func RegisterFilesInTorrent(item *GlTorrentItem, movie *MOVIE, season *SEASON) [
 			episodes_numbers = append(episodes_numbers, episode_number)
 			file.SEASON_ID = season.ID
 			file.TV_ID = season.TV_ID
-			file.EPISODE_ID = season.GetEpisode(episode_number, true).ID
+			file.EPISODE_ID = season.GetEpisode(episode_number, true, db).ID
 			renders[i] = &file
 		}
 		db.Save(&file)
@@ -506,6 +508,9 @@ func InitTorrents(db *gorm.DB) {
 }
 
 func RegisterHandlers(torrent *torrent.Torrent, dbElement *Torrent, db *gorm.DB, user *User) {
+	if user.TORRENT_DOWNLOAD_STRATEGY == "full" {
+		torrent.DownloadAll()
+	}
 	startDownloaded := dbElement.DOWNLOAD
 	startUploaded := dbElement.UPLOAD
 	startDlPath := dbElement.DL_PATH

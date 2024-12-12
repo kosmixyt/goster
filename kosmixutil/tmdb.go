@@ -324,9 +324,9 @@ func GetVideo(videos []TMDB_VIDEO_ITEM) (TMDB_VIDEO_ITEM, error) {
 	return TMDB_VIDEO_ITEM{}, errors.New("no video found")
 }
 
-var cacheTmdb map[string]*TMDB_SEARCH_MOVIE = make(map[string]*TMDB_SEARCH_MOVIE)
+var cacheTmdb map[string]TMDB_SEARCH_MOVIE = make(map[string]TMDB_SEARCH_MOVIE)
 
-func Get_tmdb_discover_movie(release_gte string, order string, release_lte string, watch_region string, withGenre []int, withKeywords []int, withOriginCountry string, withOriginalLanguage string, runtime_gte int32, runtime_lte int32, withWatchProviders []int) (*TMDB_SEARCH_MOVIE, error) {
+func Get_tmdb_discover_movie(release_gte string, order string, release_lte string, watch_region string, withGenre []int, withKeywords []int, withOriginCountry string, withOriginalLanguage string, runtime_gte int32, runtime_lte int32, withWatchProviders []int) (TMDB_SEARCH_MOVIE, error) {
 	// https://api.themoviedb.org/3/watch/providers/movie?watch_region=FR&api_key=
 	url := API_URL + "/discover/movie?api_key=" + API_KEY + "&language=" + SHORT_LANGUAGE
 	if release_gte != "" {
@@ -370,10 +370,14 @@ func Get_tmdb_discover_movie(release_gte string, order string, release_lte strin
 	fmt.Println(url)
 	resp, err := http.Get(url)
 	if err != nil {
-		return nil, err
+		return TMDB_SEARCH_MOVIE{}, err
 	}
 	var result TMDB_SEARCH_MOVIE
-	json.NewDecoder(resp.Body).Decode(&result)
-	cacheTmdb[url] = &result
-	return &result, nil
+	fullbody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return TMDB_SEARCH_MOVIE{}, err
+	}
+	json.Unmarshal(fullbody, &result)
+	cacheTmdb[url] = result
+	return result, nil
 }

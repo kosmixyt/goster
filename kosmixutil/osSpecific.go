@@ -15,10 +15,6 @@ func GetShell() string {
 	}
 }
 
-// libx264 -> transcode work, convert work
-// return []string{"-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency", "-pix_fmt", "yuv420p", "-profile:v", "baseline", "-crf", "22"}
-// h264_nvenc -> transcode work, convert work
-// return []string{"-c:v", "h264_nvenc", "-preset", "p1", "-pix_fmt", "yuv420p", "-profile:v", "baseline", "-crf", "22"}
 func GetEncoderSettings(encoder string) []string {
 	switch encoder {
 	case "libx264":

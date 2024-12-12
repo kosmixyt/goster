@@ -44,7 +44,7 @@ func (s *SEASON) Refresh(preload func() *gorm.DB) {
 	}
 }
 
-func (s *SEASON) GetEpisode(episode int, createIfNotExist bool) *EPISODE {
+func (s *SEASON) GetEpisode(episode int, createIfNotExist bool, tx *gorm.DB) *EPISODE {
 	if len(s.EPISODES) == 0 {
 		fmt.Println("[WARN] No episode found for season", s.ID)
 	}
@@ -66,7 +66,7 @@ func (s *SEASON) GetEpisode(episode int, createIfNotExist bool) *EPISODE {
 		STILL_IMAGE_PATH:         "",
 		STILL_IMAGE_STORAGE_TYPE: 2,
 	}
-	db.Save(&episodeElement)
+	tx.Save(&episodeElement)
 	s.EPISODES = append(s.EPISODES, episodeElement)
 	return episodeElement
 }

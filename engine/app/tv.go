@@ -65,7 +65,7 @@ func (t *TV) GetNextEpisode(episode *EPISODE) *EPISODE {
 	return nil
 }
 
-func (t *TV) GetSeason(season int, createIfNotExist bool) *SEASON {
+func (t *TV) GetSeason(season int, createIfNotExist bool, tx *gorm.DB) *SEASON {
 	if len(t.SEASON) == 0 {
 		fmt.Println("[WARN] No season found for TV", t.ID)
 	}
@@ -84,7 +84,7 @@ func (t *TV) GetSeason(season int, createIfNotExist bool) *SEASON {
 		NAME:                fmt.Sprintf("Season %d", season),
 		BACKDROP_IMAGE_PATH: "",
 	}
-	db.Save(seasonElement)
+	tx.Save(seasonElement)
 	t.SEASON = append(t.SEASON, seasonElement)
 	return seasonElement
 }
@@ -284,10 +284,10 @@ func (tv *TV) MoveFiles(serie *TV) error {
 		for _, season := range tv.SEASON {
 			for _, episode := range season.EPISODES {
 				if season.HasFile() {
-					seasonOnNewSerie := serie.GetSeason(season.NUMBER, true)
+					seasonOnNewSerie := serie.GetSeason(season.NUMBER, true, tx)
 					for _, file := range episode.FILES {
 						if episode.HasFile(nil) {
-							episodeOnNewSeries := seasonOnNewSerie.GetEpisode(episode.NUMBER, true)
+							episodeOnNewSeries := seasonOnNewSerie.GetEpisode(episode.NUMBER, true, tx)
 							if err := tx.Model(&file).Updates(FILE{
 								TV_ID:      serie.ID,
 								SEASON_ID:  seasonOnNewSerie.ID,
