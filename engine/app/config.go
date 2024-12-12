@@ -279,6 +279,17 @@ func GetUser(db *gorm.DB, ctx *gin.Context, preload []string) (User, error) {
 	}
 	return user, nil
 }
+func GetUserWs(db *gorm.DB, user_id string, preload []string) (User, error) {
+	var user User
+	tx := db.Where("id = ?", user_id)
+	for _, p := range preload {
+		tx = tx.Preload(p)
+	}
+	if tx.First(&user).Error != nil {
+		return user, fmt.Errorf("user not found")
+	}
+	return user, nil
+}
 
 // get quality by index
 func GetQuality(i int) *QUALITY {

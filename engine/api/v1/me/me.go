@@ -5,8 +5,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 	"gorm.io/gorm"
 	engine "kosmix.fr/streaming/engine/app"
+	"kosmix.fr/streaming/kosmixutil"
 )
 
 func HandleMeController(user *engine.User, db *gorm.DB) (*Me, error) {
@@ -175,7 +177,23 @@ func HandleMe(ctx *gin.Context, db *gorm.DB) {
 		ctx.JSON(401, gin.H{"error": err.Error()})
 		return
 	}
-	HandleMeController(&user, db)
+	if me, err := HandleMeController(&user, db); err != nil {
+		ctx.JSON(400, gin.H{"error": err.Error()})
+	} else {
+		ctx.JSON(200, me)
+	}
+}
+func HandleMeWs(db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+	user, err := engine.GetUserWs(db, request.UserToken, []string{"SHARES", "SHARES.FILE", "Requests", "Requests.TV", "Requests.TV_SEASON", "Requests.Movie", "Requests.TORRENT"})
+	if err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, err, request.RequestUuid)
+		return
+	}
+	if me, err := HandleMeController(&user, db); err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, err, request.RequestUuid)
+	} else {
+		kosmixutil.SendWebsocketResponse(conn, me, nil, request.RequestUuid)
+	}
 }
 
 type Me struct {

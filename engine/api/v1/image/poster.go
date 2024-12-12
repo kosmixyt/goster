@@ -1,11 +1,14 @@
 package image
 
 import (
+	"errors"
 	"slices"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 	"gorm.io/gorm"
 	engine "kosmix.fr/streaming/engine/app"
+	"kosmix.fr/streaming/kosmixutil"
 )
 
 func HandlePosterController(source_type string, source_id string, target_image string, quality string, db *gorm.DB) ([]byte, error) {
@@ -58,7 +61,6 @@ func HandlePosterController(source_type string, source_id string, target_image s
 			rtmp, etmp := movie.GetLogo(quality)
 			data = rtmp
 			err = etmp
-
 		default:
 			return nil, engine.ErrorInvalidImage
 		}
@@ -80,12 +82,26 @@ func HandlePoster(ctx *gin.Context, db *gorm.DB) {
 	}
 	source_type := ctx.Query("type")
 	source_id := ctx.Query("id")
-	target_image := ctx.Query("target")
+	target_image := ctx.Query("image")
 	quality := ctx.Query("quality")
 	if data, err := HandlePosterController(source_type, source_id, target_image, quality, db); err != nil {
 		ctx.JSON(400, gin.H{"error": err.Error()})
 		return
 	} else {
 		ctx.Data(200, "image/png", data)
+	}
+}
+
+func HandlePosterWs(db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+	_, err := engine.GetUserWs(db, request.UserToken, []string{})
+	if err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("not logged in"), request.RequestUuid)
+		return
+	}
+	vals := kosmixutil.GetStringKeys([]string{"type", "id", "image", "quality"}, request.Options)
+	if data, err := HandlePosterController(vals["type"], vals["id"], vals["image"], vals["quality"], db); err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, err, request.RequestUuid)
+	} else {
+		kosmixutil.SendWebsocketResponse(conn, data, nil, request.RequestUuid)
 	}
 }

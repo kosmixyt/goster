@@ -5,6 +5,8 @@ import (
 	"slices"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
+
 	"gorm.io/gorm"
 	engine "kosmix.fr/streaming/engine/app"
 	"kosmix.fr/streaming/kosmixutil"
@@ -71,4 +73,19 @@ func SearchController(db *gorm.DB, q string, specificType string, user *engine.U
 		}
 	}
 	return elements, nil
+}
+
+func MultiSearchWs(db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+	user, err := engine.GetUserWs(db, request.UserToken, []string{})
+	if err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("not logged in"), request.RequestUuid)
+		return
+	}
+	vals := kosmixutil.GetStringKeys([]string{"query", "type"}, request.Options)
+	data, err := SearchController(db, vals["query"], vals["type"], &user)
+	if err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("error"), request.RequestUuid)
+		return
+	}
+	kosmixutil.SendWebsocketResponse(conn, data, nil, request.RequestUuid)
 }

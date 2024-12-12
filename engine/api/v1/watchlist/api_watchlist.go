@@ -1,9 +1,13 @@
 package watchlist
 
 import (
+	"errors"
+
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 	"gorm.io/gorm"
 	engine "kosmix.fr/streaming/engine/app"
+	"kosmix.fr/streaming/kosmixutil"
 )
 
 func WatchListEndpoint(ctx *gin.Context, db *gorm.DB) {
@@ -20,6 +24,20 @@ func WatchListEndpoint(ctx *gin.Context, db *gorm.DB) {
 		ctx.JSON(200, list)
 	}
 
+}
+func DeleteFromWatchingListWs(db *gorm.DB, request *kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+	user, err := engine.GetUserWs(db, request.UserToken, []string{})
+	if err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("not logged in"), request.RequestUuid)
+		return
+	}
+	key := kosmixutil.GetStringKeys([]string{"action", "type", "id"}, request.Options)
+	if err, list := WatchListController(key["action"], key["type"], key["id"], &user, db); err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, err, request.RequestUuid)
+		return
+	} else {
+		kosmixutil.SendWebsocketResponse(conn, list, nil, request.RequestUuid)
+	}
 }
 
 func WatchListController(action string, itype string, id string, user *engine.User, db *gorm.DB) (error, []engine.SKINNY_RENDER) {

@@ -48,6 +48,7 @@ func Scan(locations []StorageElement, db *gorm.DB) {
 		go storage.Init(location.Name, channel, location.Options)
 		err = <-channel
 		if err != nil {
+
 			panic(err)
 		}
 		fmt.Println("Storage initiated: ", location.Name)

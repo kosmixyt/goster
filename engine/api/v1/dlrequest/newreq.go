@@ -5,8 +5,10 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 	"gorm.io/gorm"
 	engine "kosmix.fr/streaming/engine/app"
+	"kosmix.fr/streaming/kosmixutil"
 )
 
 func NewDownloadRequest(db *gorm.DB, ctx *gin.Context) {
@@ -23,32 +25,18 @@ func NewDownloadRequest(db *gorm.DB, ctx *gin.Context) {
 	}
 
 }
-func DeleteRequest(db *gorm.DB, ctx *gin.Context) {
-	user, err := engine.GetUser(db, ctx, []string{"Requests"})
+func NewDownloadRequestWs(db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+	user, err := engine.GetUserWs(db, request.UserToken, []string{"Requests"})
 	if err != nil {
-		ctx.JSON(401, gin.H{"error": "not logged in"})
-		return
-
-	}
-	if err = DeleteRequestController(&user, ctx.Query("id"), db); err == nil {
-		ctx.JSON(200, gin.H{"status": "success"})
+		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("not logged in"), request.RequestUuid)
 		return
 	}
-	ctx.JSON(400, gin.H{"error": "request not found"})
-}
-
-func DeleteRequestController(user *engine.User, str_id string, db *gorm.DB) error {
-	id, err := strconv.ParseUint(str_id, 10, 64)
-	if err != nil {
-		return err
+	vals := kosmixutil.GetStringKeys([]string{"max_size", "season_id", "id", "type"}, request.Options)
+	if err, req := NewDownloadRequestController(vals["max_size"], &user, vals["season_id"], vals["id"], vals["type"]); err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, err, request.RequestUuid)
+	} else {
+		kosmixutil.SendWebsocketResponse(conn, gin.H{"status": "success", "id": req.ID}, nil, request.RequestUuid)
 	}
-	for _, req := range user.Requests {
-		if uint64(req.ID) == id {
-			db.Where("id = ?", req.ID).Delete(&engine.DownloadRequest{})
-			return nil
-		}
-	}
-	return errors.New("request not found")
 }
 func NewDownloadRequestController(max_size_str string, user *engine.User, season_id_str string, id_str string, itype string) (error, *engine.DownloadRequest) {
 	max_size, err := strconv.ParseInt(max_size_str, 10, 64)

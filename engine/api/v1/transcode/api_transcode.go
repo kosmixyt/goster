@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 	"gorm.io/gorm"
 	engine "kosmix.fr/streaming/engine/app"
 	"kosmix.fr/streaming/kosmixutil"
@@ -37,7 +38,7 @@ func NewTranscoderController(
 	episode_str string,
 	id string,
 	torrent_id_str string,
-	close_chan func() <-chan bool,
+	close_chan *(func() <-chan bool),
 ) {
 	if !user.CAN_TRANSCODE_FILE() {
 		progress(engine.ServerSideError, "not allowed to transcode")
@@ -181,7 +182,7 @@ func NewTranscoderController(
 			Db:                db,
 		}
 		progress("progress", "Transcoder Waiting ffprobe Data")
-		transcoder.GetData(close_chan())
+		transcoder.GetData((*close_chan)())
 		progress("progress", "Transcoder Data Received")
 		WatchingItem.TOTAL = int64(transcoder.LENGTH)
 		engine.Transcoders = append(engine.Transcoders, transcoder)
@@ -237,6 +238,7 @@ func NewTranscoder(app *gin.Engine, ctx *gin.Context, db *gorm.DB) {
 		kosmixutil.SendEvent(ctx, engine.ServerSideError, "not logged in")
 		return
 	}
+	f := func() <-chan bool { return ctx.Writer.CloseNotify() }
 	NewTranscoderController(
 		app,
 		db,
@@ -250,8 +252,30 @@ func NewTranscoder(app *gin.Engine, ctx *gin.Context, db *gorm.DB) {
 		ctx.Query("episode"),
 		ctx.Query("id"),
 		ctx.Query("torrent_id"),
-		func() <-chan bool { return ctx.Writer.CloseNotify() },
+		&f,
 	)
+}
+func NewTranscoderWs(app *gin.Engine, db *gorm.DB, request *kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+	user, err := engine.GetUserWs(db, request.UserToken, []string{})
+	if err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("not logged in"), request.RequestUuid)
+		return
+	}
+	key := kosmixutil.GetStringKeys([]string{"fileId", "type", "season", "episode", "id", "torrent_id"}, request.Options)
+	NewTranscoderController(
+		app,
+		db,
+		&user,
+		func(event, data string) { fmt.Println("Event", event, data) },
+		key["fileId"],
+		key["type"],
+		key["season"],
+		key["episode"],
+		key["id"],
+		key["torrent_id"],
+		nil,
+	)
+	kosmixutil.SendWebsocketResponse(conn, gin.H{"success": true}, nil, request.RequestUuid)
 }
 
 func TranscodeSegment(ctx *gin.Context, db *gorm.DB) {
@@ -323,6 +347,20 @@ func TranscodeSegmentController(user *engine.User, uuid string, number string, Q
 	// ctx.Data(200, "application/octet-stream", data)
 	return data, nil
 }
+func TranscodeSegmentWs(db *gorm.DB, request *kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+	user, err := engine.GetUserWs(db, request.UserToken, []string{})
+	if err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("not logged in"), request.RequestUuid)
+		return
+	}
+	keys := kosmixutil.GetStringKeys([]string{"uuid", "number", "quality", "track", "current"}, request.Options)
+	data, err := TranscodeSegmentController(&user, keys["uuid"], keys["number"], keys["quality"], keys["track"], keys["current"])
+	if err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, err, request.RequestUuid)
+		return
+	}
+	kosmixutil.SendWebsocketResponse(conn, data, nil, request.RequestUuid)
+}
 func TranscodeManifest(ctx *gin.Context, db *gorm.DB) {
 	user, err := engine.GetUser(db, ctx, []string{})
 	if err != nil {
@@ -347,6 +385,20 @@ func TranscodeManifestController(user *engine.User, uuid string) ([]byte, error)
 	manifest := <-channel
 	return []byte(manifest), nil
 }
+func TranscodeManifestWs(db *gorm.DB, request *kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+	user, err := engine.GetUserWs(db, request.UserToken, []string{})
+	if err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("not logged in"), request.RequestUuid)
+		return
+	}
+	key := kosmixutil.GetStringKey("uuid", request.Options)
+	manifest, err := TranscodeManifestController(&user, key)
+	if err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, err, request.RequestUuid)
+		return
+	}
+	kosmixutil.SendWebsocketResponse(conn, manifest, nil, request.RequestUuid)
+}
 func TranscodeSubtitle(ctx *gin.Context, db *gorm.DB) {
 	user, err := engine.GetUser(db, ctx, []string{})
 	if err != nil {
@@ -362,6 +414,7 @@ func TranscodeSubtitle(ctx *gin.Context, db *gorm.DB) {
 	}
 	ctx.DataFromReader(200, -1, "text/vtt", reader, nil)
 }
+
 func TranscodeSubtitleController(user *engine.User, uuid string, index string) (io.Reader, error) {
 
 	number := index
@@ -383,6 +436,20 @@ func TranscodeSubtitleController(user *engine.User, uuid string, index string) (
 		return nil, errors.New("subtitle not found")
 	}
 	return reader, nil
+}
+func TranscodeSubtitleWs(db *gorm.DB, request *kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+	user, err := engine.GetUserWs(db, request.UserToken, []string{})
+	if err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("not logged in"), request.RequestUuid)
+		return
+	}
+	keys := kosmixutil.GetStringKeys([]string{"uuid", "index"}, request.Options)
+	reader, err := TranscodeSubtitleController(&user, keys["uuid"], keys["index"])
+	if err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, err, request.RequestUuid)
+		return
+	}
+	kosmixutil.SendWebsocketResponse(conn, reader, nil, request.RequestUuid)
 }
 
 // watching -> Preload movie, Episode, tv, tv.season, tv.season.episodes, user, episode.season

@@ -4,8 +4,10 @@ import (
 	"fmt"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 	"gorm.io/gorm"
 	engine "kosmix.fr/streaming/engine/app"
+	"kosmix.fr/streaming/kosmixutil"
 )
 
 func Browse(ctx *gin.Context, db *gorm.DB) {
@@ -21,6 +23,23 @@ func Browse(ctx *gin.Context, db *gorm.DB) {
 	}
 	ctx.JSON(400, gin.H{"error": err.Error()})
 }
+
+func BrowseWs(db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+	user, err := engine.GetUserWs(db, request.UserToken, []string{})
+	if err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, fmt.Errorf("not logged in"), request.RequestUuid)
+		return
+	}
+
+	vals := kosmixutil.GetStringKeys([]string{"genre", "type", "provider"}, request.Options)
+	data, err := BrowseController(db, &user, vals["genre"], vals["type"], vals["provider"])
+	if err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, fmt.Errorf("error"), request.RequestUuid)
+		return
+	}
+	kosmixutil.SendWebsocketResponse(conn, data, nil, request.RequestUuid)
+}
+
 func BrowseController(db *gorm.DB, user *engine.User, genre string, itype string, provider string) ([]engine.SKINNY_RENDER, error) {
 	if genre != "" {
 		var idgenre int

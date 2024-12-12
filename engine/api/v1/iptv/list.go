@@ -1,11 +1,14 @@
 package iptv
 
 import (
+	"errors"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 	"gorm.io/gorm"
 	engine "kosmix.fr/streaming/engine/app"
+	"kosmix.fr/streaming/kosmixutil"
 )
 
 func ListIptv(ctx *gin.Context, db *gorm.DB) {
@@ -21,6 +24,20 @@ func ListIptv(ctx *gin.Context, db *gorm.DB) {
 	}
 	ctx.JSON(200, gin.H{"channels": engine.MapIptvToRender(channels)})
 
+}
+func ListIptvWs(db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+	user, err := engine.GetUserWs(db, request.UserToken, []string{})
+	if err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("not logged in"), request.RequestUuid)
+		return
+	}
+	vals := kosmixutil.GetStringKeys([]string{"offset", "limit", "id", "group"}, request.Options)
+	channels, err := ListIptvController(&user, vals["offset"], vals["limit"], vals["id"], vals["group"])
+	if err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("invalid parameters"), request.RequestUuid)
+		return
+	}
+	kosmixutil.SendWebsocketResponse(conn, engine.MapIptvToRender(channels), nil, request.RequestUuid)
 }
 func ListIptvController(user *engine.User, offset string, limit string, id string, group string) ([]*engine.IptvChannel, error) {
 	offsetInt, err := strconv.Atoi(offset)

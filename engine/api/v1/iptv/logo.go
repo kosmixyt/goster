@@ -9,8 +9,10 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 	"gorm.io/gorm"
 	engine "kosmix.fr/streaming/engine/app"
+	"kosmix.fr/streaming/kosmixutil"
 )
 
 func Logo(ctx *gin.Context, db *gorm.DB) {
@@ -80,4 +82,17 @@ func LogoController(user *engine.User, iptv_id string, channel_id string, db *go
 		return nil, errors.New("server error")
 	}
 	return data, nil
+}
+func LogoWs(db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+	user, err := engine.GetUserWs(db, request.UserToken, []string{})
+	if err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("not logged in"), request.RequestUuid)
+		return
+	}
+	vals := kosmixutil.GetStringKeys([]string{"id", "channel"}, request.Options)
+	if data, err := LogoController(&user, vals["id"], vals["channel"], db); err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, err, request.RequestUuid)
+	} else {
+		kosmixutil.SendWebsocketResponse(conn, data, nil, request.RequestUuid)
+	}
 }

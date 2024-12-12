@@ -5,8 +5,11 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
+
 	"gorm.io/gorm"
 	engine "kosmix.fr/streaming/engine/app"
+	"kosmix.fr/streaming/kosmixutil"
 )
 
 func DeleteShare(ctx *gin.Context, db *gorm.DB) {
@@ -32,4 +35,18 @@ func DeleteShareController(db *gorm.DB, id string, user engine.User) error {
 	}
 	db.Delete(sh)
 	return nil
+}
+
+func DeleteShareWs(db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+	user, err := engine.GetUserWs(db, request.UserToken, []string{"SHARES"})
+	if err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("not logged in"), request.RequestUuid)
+		return
+	}
+	key := kosmixutil.GetStringKeys([]string{"id"}, request.Options)
+	if err := DeleteShareController(db, key["id"], user); err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("share not found"), request.RequestUuid)
+		return
+	}
+	kosmixutil.SendWebsocketResponse(conn, gin.H{"status": "ok"}, nil, request.RequestUuid)
 }

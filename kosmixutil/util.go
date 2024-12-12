@@ -3,6 +3,7 @@ package kosmixutil
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/dlclark/regexp2"
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 )
 
 const PREDICT_NAME_SEPARATOR = "{@@@}"
@@ -28,6 +30,37 @@ func SendEvent(ctx *gin.Context, event string, data string) {
 		fmt.Fprintf(ctx.Writer, "data: %s\n\n", data)
 		ctx.Writer.Flush()
 	}
+}
+
+func SendWebsocketResponse(websocket *websocket.Conn, data interface{}, err error, reqId string) {
+	res := WebsocketResponse{
+		RequestUuid: reqId,
+		Data:        data,
+		Error:       "",
+	}
+	if err != nil {
+		res.Error = err.Error()
+	}
+	bdata, err := json.Marshal(res)
+	if err != nil {
+		panic(err)
+	}
+	err = websocket.WriteMessage(1, bdata)
+	if err != nil {
+		panic(err)
+	}
+}
+
+type WebsocketMessage struct {
+	RequestUuid string      `json:"requestUuid"`
+	Type        string      `json:"type"`
+	Options     interface{} `json:"options"`
+	UserToken   string      `json:"userToken"`
+}
+type WebsocketResponse struct {
+	RequestUuid string      `json:"requestUuid"`
+	Data        interface{} `json:"data"`
+	Error       string      `json:"error"`
 }
 
 func ReturnGood(name string) string {
@@ -233,4 +266,19 @@ func GenerateRandomKey(size int) string {
 		panic(err)
 	}
 	return base64.StdEncoding.EncodeToString(b)
+}
+
+func GetStringKey(key string, opt interface{}) string {
+	val, exist := opt.(map[string]interface{})[key].(string)
+	if !exist {
+		return ""
+	}
+	return val
+}
+func GetStringKeys(keys []string, opt interface{}) map[string]string {
+	val := make(map[string]string)
+	for _, key := range keys {
+		val[key] = GetStringKey(key, opt)
+	}
+	return val
 }

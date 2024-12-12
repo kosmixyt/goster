@@ -6,8 +6,10 @@ import (
 
 	"github.com/anacrolix/torrent/types"
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 	"gorm.io/gorm"
 	engine "kosmix.fr/streaming/engine/app"
+	"kosmix.fr/streaming/kosmixutil"
 )
 
 func TorrentActionController(user *engine.User, torrent_id string, action string, deleteFiles string, fileIndex string, priority string, db *gorm.DB) error {
@@ -117,4 +119,17 @@ func TorrentsAction(ctx *gin.Context, db *gorm.DB) {
 		return
 	}
 	ctx.JSON(200, gin.H{"success": true})
+}
+func TorrentsActionWs(db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+	user, err := engine.GetUserWs(db, request.UserToken, []string{})
+	if err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("not logged in"), request.RequestUuid)
+		return
+	}
+	keys := kosmixutil.GetStringKeys([]string{"torrent_id", "action", "deleteFiles", "fileIndex", "priority"}, request.Options)
+	if err := TorrentActionController(&user, keys["torrent_id"], keys["action"], keys["deleteFiles"], keys["fileIndex"], keys["priority"], db); err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, err, request.RequestUuid)
+		return
+	}
+	kosmixutil.SendWebsocketResponse(conn, gin.H{"success": true}, nil, request.RequestUuid)
 }

@@ -101,6 +101,7 @@ func Init() *gorm.DB {
 	fmt.Println("Scanning locations")
 	Scan(Config.Locations, dbClient)
 	InitTorrents(dbClient)
+
 	// VerifyDB(dbClient)
 	return dbClient
 }

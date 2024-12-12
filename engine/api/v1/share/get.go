@@ -37,5 +37,4 @@ func GetShareController(db *gorm.DB, id string) (*engine.Share, error) {
 		return nil, errors.New("expired")
 	}
 	return share, nil
-
 }

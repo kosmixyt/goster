@@ -4,8 +4,10 @@ import (
 	"errors"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 	"gorm.io/gorm"
 	engine "kosmix.fr/streaming/engine/app"
+	"kosmix.fr/streaming/kosmixutil"
 )
 
 func RenderItem(ctx *gin.Context, db *gorm.DB) {
@@ -46,5 +48,26 @@ func RenderItemController(itype string, id string, user *engine.User, db *gorm.D
 		renderer := movie.Render(user)
 		return nil, &renderer, nil
 	}
-	return errors.New("Bad type"), nil, nil
+	return errors.New("bad type"), nil, nil
+}
+func RenderItemWs(db *gorm.DB, request kosmixutil.WebsocketMessage, websocket *websocket.Conn) {
+	user, err := engine.GetUserWs(db, request.UserToken, []string{})
+	if err != nil {
+		kosmixutil.SendWebsocketResponse(websocket, nil, errors.New("not logged in"), request.RequestUuid)
+		return
+	}
+	vals := kosmixutil.GetStringKeys([]string{"type", "id"}, request.Options)
+	err, movie, tv := RenderItemController(vals["type"], vals["id"], &user, db)
+	if err != nil {
+		kosmixutil.SendWebsocketResponse(websocket, nil, err, request.RequestUuid)
+		return
+	}
+	if movie != nil {
+		kosmixutil.SendWebsocketResponse(websocket, movie, nil, request.RequestUuid)
+		return
+	}
+	if tv != nil {
+		kosmixutil.SendWebsocketResponse(websocket, tv, nil, request.RequestUuid)
+		return
+	}
 }

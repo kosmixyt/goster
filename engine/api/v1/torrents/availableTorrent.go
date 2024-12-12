@@ -1,12 +1,14 @@
 package torrents
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 	"gorm.io/gorm"
 	engine "kosmix.fr/streaming/engine/app"
 	"kosmix.fr/streaming/kosmixutil"
@@ -82,6 +84,19 @@ func AvailableTorrents(ctx *gin.Context, db *gorm.DB) {
 	if data, err := AvailableTorrentController(&user, db, id, itype, season_id); err != nil {
 		ctx.JSON(400, gin.H{"error": err.Error()})
 	} else {
-		ctx.JSON(200, gin.H{"success": data})
+		ctx.JSON(200, data)
+	}
+}
+func AvailableTorrentsWs(db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+	user, err := engine.GetUserWs(db, request.UserToken, []string{})
+	if err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("not logged in"), request.RequestUuid)
+		return
+	}
+	keys := kosmixutil.GetStringKeys([]string{"type", "id", "season"}, request.Options)
+	if data, err := AvailableTorrentController(&user, db, keys["type"], keys["id"], keys["season"]); err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, err, request.RequestUuid)
+	} else {
+		kosmixutil.SendWebsocketResponse(conn, data, nil, request.RequestUuid)
 	}
 }

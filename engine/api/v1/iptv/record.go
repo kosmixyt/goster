@@ -1,12 +1,14 @@
 package iptv
 
 import (
-	"strconv"
+	"errors"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 	"gorm.io/gorm"
 	engine "kosmix.fr/streaming/engine/app"
+	"kosmix.fr/streaming/kosmixutil"
 )
 
 type AddRecordPayload struct {
@@ -96,30 +98,20 @@ func AddRecord(ctx *gin.Context, db *gorm.DB) {
 	}
 }
 
-func RemoveRecordController(record_id string, db *gorm.DB) error {
-	recordId, err := strconv.ParseInt(record_id, 10, 64)
+func AddRecordWs(db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+	user, err := engine.GetUserWs(db, request.UserToken, []string{})
 	if err != nil {
-		return err
-	}
-	var record engine.Record
-	if db.Where("id = ?", recordId).First(&record).Error != nil {
-		return engine.ErrorRecordNotFound
-	}
-	if err := db.Delete(&record).Error; err != nil {
-		return err
-	}
-	return nil
-}
-
-func RemoveRecord(ctx *gin.Context, db *gorm.DB) {
-	_, err := engine.GetUser(db, ctx, []string{})
-	if err != nil {
-		ctx.JSON(401, gin.H{"error": "not logged in"})
+		kosmixutil.SendWebsocketResponse(conn, nil, err, request.RequestUuid)
 		return
 	}
-	if err := RemoveRecordController(ctx.Param("record_id"), db); err != nil {
-		ctx.JSON(400, gin.H{"error": err.Error()})
+	payload, ok := request.Options.(AddRecordPayload)
+	if !ok {
+		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("bad payload"), request.RequestUuid)
 		return
 	}
-
+	if err := AddRecordController(&user, payload, db); err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, err, request.RequestUuid)
+		return
+	}
+	kosmixutil.SendWebsocketResponse(conn, gin.H{"status": "success"}, nil, request.RequestUuid)
 }

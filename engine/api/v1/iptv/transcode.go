@@ -42,7 +42,6 @@ func TranscodeIptv(ctx *gin.Context, db *gorm.DB) {
 		SendEvent(engine.ServerSideError, err.Error())
 	}
 }
-
 func TranscodeIptvController(db *gorm.DB, user *engine.User, channelIdStr string, on_progress func(string, string), stop <-chan bool) error {
 	task := user.CreateTask("Transcode IPTV", func() error { return errors.New("uncancellable task") })
 	if !user.CAN_TRANSCODE {

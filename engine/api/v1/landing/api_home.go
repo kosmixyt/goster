@@ -6,8 +6,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/gorilla/websocket"
 	"gorm.io/gorm"
 	engine "kosmix.fr/streaming/engine/app"
+	"kosmix.fr/streaming/kosmixutil"
 )
 
 func Landing(db *gorm.DB, ctx *gin.Context) {
@@ -17,20 +19,31 @@ func Landing(db *gorm.DB, ctx *gin.Context) {
 		ctx.JSON(401, gin.H{"error": "not logged in"})
 		return
 	}
-	recents, lines, channelsProvider, err := LandingController(&user, db)
+	data, err := LandingController(&user, db)
 	if err != nil {
 		ctx.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(200, gin.H{
-		"Recents":   recents,
-		"Lines":     lines,
-		"Providers": channelsProvider,
-	})
+	ctx.JSON(200, data)
 	fmt.Println("time", time.Since(start))
 }
-
-func LandingController(user *engine.User, db *gorm.DB) (*engine.Line_Render, []engine.Line_Render, []engine.Provider_Line, error) {
+func LandingWesocket(db *gorm.DB, request kosmixutil.WebsocketMessage, websocket *websocket.Conn) {
+	user, err := engine.GetUserWs(db, request.UserToken, []string{"WATCH_LIST_MOVIES", "WATCH_LIST_TVS"})
+	if err != nil {
+		fmt.Println("not logged in")
+		kosmixutil.SendWebsocketResponse(websocket, nil, fmt.Errorf("not logged in"), request.RequestUuid)
+		return
+	}
+	fmt.Println("user", user)
+	data, err := LandingController(&user, db)
+	fmt.Println("data", err)
+	if err != nil {
+		kosmixutil.SendWebsocketResponse(websocket, nil, fmt.Errorf("error"), request.RequestUuid)
+		return
+	}
+	kosmixutil.SendWebsocketResponse(websocket, data, nil, request.RequestUuid)
+}
+func LandingController(user *engine.User, db *gorm.DB) (interface{}, error) {
 	recents := engine.GetRecent(db, *user)
 	var lines []engine.Line_Render = make([]engine.Line_Render, 0)
 	WATCHINGS := user.GetReworkedWatching()
@@ -96,5 +109,10 @@ func LandingController(user *engine.User, db *gorm.DB) (*engine.Line_Render, []e
 			lines[i].Data = l.Data[0 : len(l.Data)-(len(l.Data)%6)]
 		}
 	}
-	return recents, lines, <-channelsProvider, nil
+	return gin.H{
+		"Recents":   recents,
+		"Lines":     lines,
+		"Providers": <-channelsProvider,
+	}, nil
+
 }
