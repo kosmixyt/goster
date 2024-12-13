@@ -25,7 +25,7 @@ func WatchListEndpoint(ctx *gin.Context, db *gorm.DB) {
 	}
 
 }
-func DeleteFromWatchingListWs(db *gorm.DB, request *kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+func DeleteFromWatchingListWs(db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
 	user, err := engine.GetUserWs(db, request.UserToken, []string{})
 	if err != nil {
 		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("not logged in"), request.RequestUuid)

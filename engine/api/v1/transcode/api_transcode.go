@@ -255,7 +255,7 @@ func NewTranscoder(app *gin.Engine, ctx *gin.Context, db *gorm.DB) {
 		&f,
 	)
 }
-func NewTranscoderWs(app *gin.Engine, db *gorm.DB, request *kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+func NewTranscoderWs(app *gin.Engine, db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
 	user, err := engine.GetUserWs(db, request.UserToken, []string{})
 	if err != nil {
 		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("not logged in"), request.RequestUuid)
@@ -347,7 +347,7 @@ func TranscodeSegmentController(user *engine.User, uuid string, number string, Q
 	// ctx.Data(200, "application/octet-stream", data)
 	return data, nil
 }
-func TranscodeSegmentWs(db *gorm.DB, request *kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+func TranscodeSegmentWs(db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
 	user, err := engine.GetUserWs(db, request.UserToken, []string{})
 	if err != nil {
 		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("not logged in"), request.RequestUuid)
@@ -437,7 +437,7 @@ func TranscodeSubtitleController(user *engine.User, uuid string, index string) (
 	}
 	return reader, nil
 }
-func TranscodeSubtitleWs(db *gorm.DB, request *kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+func TranscodeSubtitleWs(db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
 	user, err := engine.GetUserWs(db, request.UserToken, []string{})
 	if err != nil {
 		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("not logged in"), request.RequestUuid)

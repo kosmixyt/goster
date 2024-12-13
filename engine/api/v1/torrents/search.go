@@ -7,8 +7,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/gorilla/websocket"
 	"gorm.io/gorm"
 	engine "kosmix.fr/streaming/engine/app"
+	"kosmix.fr/streaming/kosmixutil"
 )
 
 var ItemsTorrents map[string]*engine.Torrent_File = make(map[string]*engine.Torrent_File)
@@ -99,6 +101,20 @@ func SearchTorrents(ctx *gin.Context, db *gorm.DB) {
 		return
 	}
 	ctx.JSON(200, d)
+}
+func SearchTorrentsWs(db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+	user, err := engine.GetUserWs(db, request.UserToken, []string{})
+	if err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, err, request.RequestUuid)
+		return
+	}
+	keys := kosmixutil.GetStringKeys([]string{"query", "metadata"}, request.Options)
+	d, err := SearchTorrentsController(db, &user, keys["query"], keys["metadata"])
+	if err != nil {
+		kosmixutil.SendWebsocketResponse(conn, nil, err, request.RequestUuid)
+		return
+	}
+	kosmixutil.SendWebsocketResponse(conn, d, nil, request.RequestUuid)
 }
 
 type TorrentItemRender struct {

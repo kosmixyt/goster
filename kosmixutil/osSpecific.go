@@ -1,6 +1,9 @@
 package kosmixutil
 
-import "runtime"
+import (
+	"runtime"
+	"strings"
+)
 
 func GetShell() string {
 	switch os := runtime.GOOS; os {
@@ -16,6 +19,7 @@ func GetShell() string {
 }
 
 func GetEncoderSettings(encoder string) []string {
+	encoder = strings.ToLower(encoder)
 	switch encoder {
 	case "libx264":
 		return []string{"-c:v", "libx264", "-preset", "veryfast", "-tune", "zerolatency", "-pix_fmt", "yuv420p", "-profile:v", "baseline"}

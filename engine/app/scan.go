@@ -51,7 +51,6 @@ func InitStoragesConnection(locations []StorageElement) {
 		}
 		fmt.Println("Storage initiated: ", location.Name)
 		var ExistantStorage StorageDbElement
-
 		if tx := db.Where("name = ?", storage.Name()).First(&ExistantStorage); tx.Error != nil {
 			StorageDbElement := StorageDbElement{
 				Name:  storage.Name(),

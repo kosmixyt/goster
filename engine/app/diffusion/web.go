@@ -32,7 +32,7 @@ import (
 	"kosmix.fr/streaming/engine/api/v1/watchlist"
 )
 
-func WebServer(db *gorm.DB, port string) {
+func WebServer(db *gorm.DB, port string) *gin.Engine {
 	r := gin.Default()
 	store := cookie.NewStore([]byte(kosmixutil.GenerateRandomKey(32)))
 	r.Use(sessions.Sessions("mysession", store))
@@ -110,4 +110,5 @@ func WebServer(db *gorm.DB, port string) {
 			r.Run(":" + port)
 		}
 	}()
+	return r
 }
