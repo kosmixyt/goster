@@ -99,7 +99,8 @@ func Init() *gorm.DB {
 	os.RemoveAll(HLS_OUTPUT_PATH)
 	os.MkdirAll(HLS_OUTPUT_PATH, os.ModePerm)
 	fmt.Println("Scanning locations")
-	Scan(Config.Locations, dbClient)
+	InitStoragesConnection(Config.Locations)
+	Scan(dbClient)
 	InitTorrents(dbClient)
 
 	// VerifyDB(dbClient)

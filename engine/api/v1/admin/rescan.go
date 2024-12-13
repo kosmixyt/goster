@@ -18,7 +18,7 @@ func RescanController(user *engine.User, channel chan error, db *gorm.DB) {
 		}
 	}()
 
-	engine.Scan(engine.Config.Locations, db)
+	engine.Scan(db)
 }
 
 func Rescan(ctx *gin.Context, db *gorm.DB) {

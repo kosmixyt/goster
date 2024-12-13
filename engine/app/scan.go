@@ -27,8 +27,7 @@ func GetStorageConFromId(id uint) *MemoryStorage {
 	}
 	return nil
 }
-
-func Scan(locations []StorageElement, db *gorm.DB) {
+func InitStoragesConnection(locations []StorageElement) {
 	toNodeDeleteStorage := make([]uint, 0)
 	localDeclared := false
 	for _, location := range locations {
@@ -48,11 +47,11 @@ func Scan(locations []StorageElement, db *gorm.DB) {
 		go storage.Init(location.Name, channel, location.Options)
 		err = <-channel
 		if err != nil {
-
 			panic(err)
 		}
 		fmt.Println("Storage initiated: ", location.Name)
 		var ExistantStorage StorageDbElement
+
 		if tx := db.Where("name = ?", storage.Name()).First(&ExistantStorage); tx.Error != nil {
 			StorageDbElement := StorageDbElement{
 				Name:  storage.Name(),
@@ -78,6 +77,8 @@ func Scan(locations []StorageElement, db *gorm.DB) {
 		})
 	}
 	db.Where("id NOT IN ?", toNodeDeleteStorage).Delete(&StorageDbElement{})
+}
+func Scan(db *gorm.DB) {
 	var files_ar []*storage.FileData
 	for _, storage := range Storages {
 		for _, path := range storage.Conn.Paths() {
