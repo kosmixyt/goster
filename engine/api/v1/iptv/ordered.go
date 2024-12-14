@@ -19,7 +19,7 @@ func OrderedIptv(ctx *gin.Context, db *gorm.DB) {
 	iptv := user.IptvOrderedList()
 	ctx.JSON(200, gin.H{"iptvs": iptv})
 }
-func OrderedIptvWs(db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+func OrderedIptvWs(db *gorm.DB, request *kosmixutil.WebsocketMessage, conn *websocket.Conn) {
 	user, err := engine.GetUserWs(db, request.UserToken, []string{})
 	if err != nil {
 		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("not logged in"), request.RequestUuid)

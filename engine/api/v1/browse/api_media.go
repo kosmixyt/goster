@@ -24,7 +24,7 @@ func Browse(ctx *gin.Context, db *gorm.DB) {
 	ctx.JSON(400, gin.H{"error": err.Error()})
 }
 
-func BrowseWs(db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+func BrowseWs(db *gorm.DB, request *kosmixutil.WebsocketMessage, conn *websocket.Conn) {
 	user, err := engine.GetUserWs(db, request.UserToken, []string{})
 	if err != nil {
 		kosmixutil.SendWebsocketResponse(conn, nil, fmt.Errorf("not logged in"), request.RequestUuid)

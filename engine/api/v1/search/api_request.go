@@ -75,7 +75,7 @@ func SearchController(db *gorm.DB, q string, specificType string, user *engine.U
 	return elements, nil
 }
 
-func MultiSearchWs(db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+func MultiSearchWs(db *gorm.DB, request *kosmixutil.WebsocketMessage, conn *websocket.Conn) {
 	user, err := engine.GetUserWs(db, request.UserToken, []string{})
 	if err != nil {
 		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("not logged in"), request.RequestUuid)

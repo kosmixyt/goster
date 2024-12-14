@@ -50,7 +50,7 @@ func RenderItemController(itype string, id string, user *engine.User, db *gorm.D
 	}
 	return errors.New("bad type"), nil, nil
 }
-func RenderItemWs(db *gorm.DB, request kosmixutil.WebsocketMessage, websocket *websocket.Conn) {
+func RenderItemWs(db *gorm.DB, request *kosmixutil.WebsocketMessage, websocket *websocket.Conn) {
 	user, err := engine.GetUserWs(db, request.UserToken, []string{})
 	if err != nil {
 		kosmixutil.SendWebsocketResponse(websocket, nil, errors.New("not logged in"), request.RequestUuid)

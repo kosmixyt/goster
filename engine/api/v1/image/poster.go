@@ -92,7 +92,7 @@ func HandlePoster(ctx *gin.Context, db *gorm.DB) {
 	}
 }
 
-func HandlePosterWs(db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+func HandlePosterWs(db *gorm.DB, request *kosmixutil.WebsocketMessage, conn *websocket.Conn) {
 	_, err := engine.GetUserWs(db, request.UserToken, []string{})
 	if err != nil {
 		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("not logged in"), request.RequestUuid)

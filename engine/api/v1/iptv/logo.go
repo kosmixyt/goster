@@ -83,7 +83,7 @@ func LogoController(user *engine.User, iptv_id string, channel_id string, db *go
 	}
 	return data, nil
 }
-func LogoWs(db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+func LogoWs(db *gorm.DB, request *kosmixutil.WebsocketMessage, conn *websocket.Conn) {
 	user, err := engine.GetUserWs(db, request.UserToken, []string{})
 	if err != nil {
 		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("not logged in"), request.RequestUuid)

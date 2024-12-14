@@ -27,7 +27,7 @@ func Landing(db *gorm.DB, ctx *gin.Context) {
 	ctx.JSON(200, data)
 	fmt.Println("time", time.Since(start))
 }
-func LandingWesocket(db *gorm.DB, request kosmixutil.WebsocketMessage, websocket *websocket.Conn) {
+func LandingWesocket(db *gorm.DB, request *kosmixutil.WebsocketMessage, websocket *websocket.Conn) {
 	user, err := engine.GetUserWs(db, request.UserToken, []string{"WATCH_LIST_MOVIES", "WATCH_LIST_TVS"})
 	if err != nil {
 		fmt.Println("not logged in")

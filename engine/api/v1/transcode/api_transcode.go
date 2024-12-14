@@ -255,7 +255,7 @@ func NewTranscoder(app *gin.Engine, ctx *gin.Context, db *gorm.DB) {
 		&f,
 	)
 }
-func NewTranscoderWs(app *gin.Engine, db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+func NewTranscoderWs(app *gin.Engine, db *gorm.DB, request *kosmixutil.WebsocketMessage, conn *websocket.Conn) {
 	user, err := engine.GetUserWs(db, request.UserToken, []string{})
 	if err != nil {
 		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("not logged in"), request.RequestUuid)
@@ -347,7 +347,7 @@ func TranscodeSegmentController(user *engine.User, uuid string, number string, Q
 	// ctx.Data(200, "application/octet-stream", data)
 	return data, nil
 }
-func TranscodeSegmentWs(db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+func TranscodeSegmentWs(db *gorm.DB, request *kosmixutil.WebsocketMessage, conn *websocket.Conn) {
 	user, err := engine.GetUserWs(db, request.UserToken, []string{})
 	if err != nil {
 		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("not logged in"), request.RequestUuid)
@@ -359,7 +359,12 @@ func TranscodeSegmentWs(db *gorm.DB, request kosmixutil.WebsocketMessage, conn *
 		kosmixutil.SendWebsocketResponse(conn, nil, err, request.RequestUuid)
 		return
 	}
-	kosmixutil.SendWebsocketResponse(conn, data, nil, request.RequestUuid)
+
+	for i := 0; i < len(data)/1024; i++ {
+		kosmixutil.SendWebsocketResponse(conn, data[i*1024:(i+1)*1024], nil, request.RequestUuid)
+	}
+	kosmixutil.SendWebsocketResponse(conn, "", nil, request.RequestUuid)
+
 }
 func TranscodeManifest(ctx *gin.Context, db *gorm.DB) {
 	user, err := engine.GetUser(db, ctx, []string{})
@@ -437,7 +442,7 @@ func TranscodeSubtitleController(user *engine.User, uuid string, index string) (
 	}
 	return reader, nil
 }
-func TranscodeSubtitleWs(db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+func TranscodeSubtitleWs(db *gorm.DB, request *kosmixutil.WebsocketMessage, conn *websocket.Conn) {
 	user, err := engine.GetUserWs(db, request.UserToken, []string{})
 	if err != nil {
 		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("not logged in"), request.RequestUuid)
