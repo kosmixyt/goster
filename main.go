@@ -15,6 +15,6 @@ func main() {
 		return
 	}
 	fmt.Println("Init Finished Starting Web server")
-	port := diffusion.WebServer(db, engine.Config.Web.PublicPort)
-	diffusion.SetupWebsocketClient(db, port)
+	diffusion.WebServer(db, engine.Config.Web.PublicPort)
+	select {}
 }

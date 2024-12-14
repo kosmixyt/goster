@@ -25,6 +25,10 @@ import (
 	"kosmix.fr/streaming/kosmixutil"
 )
 
+// Packet = first 4 bytes = type of packet
+const Jsonpacket = 0x00000001
+const BufferPacket = 0x00000002
+
 func SetupWebsocketClient(db *gorm.DB, app *gin.Engine) {
 	serverURL := "ws://localhost:4040"
 
