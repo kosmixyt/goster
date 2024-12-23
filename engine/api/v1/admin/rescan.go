@@ -187,3 +187,29 @@ func AddPathController(user *engine.User, storage_name string, path kosmixutil.P
 	}
 	return engine.AddPath(storage_name, path)
 }
+func DeletePath(ctx *gin.Context, db *gorm.DB) {
+	user, err := engine.GetUser(db, ctx, []string{})
+	if err != nil {
+		ctx.JSON(401, gin.H{"error": "not logged in"})
+		return
+	}
+	var payloadPath kosmixutil.PathElement
+	err = ctx.BindJSON(&payloadPath)
+	if err != nil {
+		ctx.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	err = DeletePathController(&user, ctx.Query("storage_name"), payloadPath)
+	if err != nil {
+		ctx.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(200, gin.H{"message": "Path has been deleted from storage, please reboot to apply changes."})
+}
+
+func DeletePathController(user *engine.User, storage_name string, path kosmixutil.PathElement) error {
+	if !user.ADMIN {
+		return engine.ErrorIsNotAdmin
+	}
+	return engine.DeletePath(storage_name, path)
+}

@@ -209,6 +209,20 @@ func AddPath(name string, AddPath kosmixutil.PathElement) error {
 	}
 	return errors.New("storage not found")
 }
+func DeletePath(name string, DeletePath kosmixutil.PathElement) error {
+	for _, storage := range NewConfig.Locations {
+		if storage.Name == name {
+			for i, path := range storage.Paths {
+				if DeletePath.Path == path.Path {
+					storage.Paths = append(storage.Paths[:i], storage.Paths[i+1:]...)
+					return nil
+				}
+			}
+			return fmt.Errorf("path not found")
+		}
+	}
+	return fmt.Errorf("storage not found")
+}
 
 const FFPROBE_TIMEOUT = 10 * time.Second
 const SEGMENT_TIME = 2.0
