@@ -184,12 +184,12 @@ func RegisterFilesInTorrent(item *GlTorrentItem, movie *MOVIE, season *SEASON) [
 		fileObject.SetPriority(torrent.PiecePriorityNone)
 		file := FILE{
 			TORRENT_ID: item.DB_ID,
-			// PATH:       filepath.Dir(Config.Torrents.DownloadPath + fileObject.Path()),
-			SUB_PATH:  filepath.Dir(fileObject.Path()),
-			ROOT_PATH: Config.Torrents.DownloadPath,
-			IS_MEDIA:  false,
-			FILENAME:  filepath.Base(fileObject.Path()),
-			SIZE:      fileObject.Length(),
+			// PATH:               filepath.Dir(Config.Torrents.DownloadPath + fileObject.Path()),
+			SUB_PATH:           filepath.Dir(fileObject.Path()),
+			StoragePathElement: nil,
+			IS_MEDIA:           false,
+			FILENAME:           filepath.Base(fileObject.Path()),
+			SIZE:               fileObject.Length(),
 		}
 		if !kosmixutil.IsVideoFile(fileObject.Path()) {
 			db.Create(&file)
@@ -733,26 +733,4 @@ func CleanDeleteTorrent(withFiles bool, torrent *GlTorrentItem, db *gorm.DB) err
 	}
 	db.Unscoped().Delete(dbtorrent)
 	return nil
-}
-func GetPathWithFreeSpace(size int64) []string {
-	av := make([]string, 0)
-	for path, free := range GetPathWithFreeSpaceStr() {
-		if free > size {
-			av = append(av, path)
-		}
-	}
-	return av
-}
-func GetPathWithFreeSpaceStr() map[string]int64 {
-	var paths map[string]int64 = make(map[string]int64)
-	for _, store := range Storages {
-		for _, path := range store.Conn.Paths() {
-			freeSpace, err := store.Conn.GetFreeSpace(path)
-			if err != nil {
-				paths[path] = -1
-			}
-			paths[path] = int64(freeSpace)
-		}
-	}
-	return paths
 }

@@ -17,37 +17,37 @@ type GlTorrentItem struct {
 
 type Record struct {
 	gorm.Model
-	ID                   uint              `gorm:"unique;not null,primary_key"`
-	IPTV                 IptvItem          `gorm:"foreignKey:IPTV_ID"`
-	IPTV_ID              uint              `gorm:"not null"`
-	START                time.Time         `gorm:"not null"`
-	DURATION             int64             `gorm:"not null"`
-	OWNER                *User             `gorm:"foreignKey:OWNER_ID"`
-	Force                bool              `gorm:"not null"`
-	OWNER_ID             uint              `gorm:"not null"`
-	OUTPUT_EPISODE       *EPISODE          `gorm:"foreignKey:OUTPUT_EPISODE_ID"`
-	OUTPUT_MOVIE         *MOVIE            `gorm:"foreignKey:OUTPUT_MOVIE_ID"`
-	OUTPUT_EPISODE_ID    *uint             `gorm:"default:null"`
-	OUTPUT_MOVIE_ID      *uint             `gorm:"default:null"`
-	CHANNEL_ID           int64             `gorm:"not null"`
-	ERROR                string            `gorm:"default:null"`
-	Task                 *Task             `gorm:"foreignKey:TASK_ID"`
-	TASK_ID              uint              `gorm:"not null"`
-	ENDED                bool              `gorm:"not null"`
-	OutputStorerMem      *MemoryStorage    `gorm:"-"`
-	OutputStorerId       uint              `gorm:"default:null"`
-	OutputStorer         *StorageDbElement `gorm:"foreignKey:OutputStorerId"`
-	OutputStorerRootPath string            `gorm:"not null"`
-	OutputStorerFileName string            `gorm:"not null"`
-	OutputFile           *FILE             `gorm:"foreignKey:OUTPUT_FILE_ID"`
-	OUTPUT_FILE_ID       *uint             `gorm:"default:null"`
+	ID                   uint                `gorm:"unique;not null,primary_key"`
+	IPTV                 IptvItem            `gorm:"foreignKey:IPTV_ID"`
+	IPTV_ID              uint                `gorm:"not null"`
+	START                time.Time           `gorm:"not null"`
+	DURATION             int64               `gorm:"not null"`
+	OWNER                *User               `gorm:"foreignKey:OWNER_ID"`
+	Force                bool                `gorm:"not null"`
+	OWNER_ID             uint                `gorm:"not null"`
+	OUTPUT_EPISODE       *EPISODE            `gorm:"foreignKey:OUTPUT_EPISODE_ID"`
+	OUTPUT_MOVIE         *MOVIE              `gorm:"foreignKey:OUTPUT_MOVIE_ID"`
+	OUTPUT_EPISODE_ID    *uint               `gorm:"default:null"`
+	OUTPUT_MOVIE_ID      *uint               `gorm:"default:null"`
+	CHANNEL_ID           int64               `gorm:"not null"`
+	ERROR                string              `gorm:"default:null"`
+	Task                 *Task               `gorm:"foreignKey:TASK_ID"`
+	TASK_ID              uint                `gorm:"not null"`
+	ENDED                bool                `gorm:"not null"`
+	OutputStorerMem      *MemoryStorage      `gorm:"-"`
+	OutputPathStorer     *StoragePathElement `gorm:"foreignKey:OutputPathStorerId"`
+	OutputPathStorerId   uint                `gorm:"default:null"`
+	OutputStorerFileName string              `gorm:"not null"`
+	OutputFile           *FILE               `gorm:"foreignKey:OUTPUT_FILE_ID"`
+	OUTPUT_FILE_ID       *uint               `gorm:"default:null"`
 }
 type QUALITY struct {
-	Name         string `json:"Name"`
-	Resolution   int    `json:"Resolution"`
-	Width        int    `json:"Width"`
-	VideoBitrate int    `json:"VideoBitrate"`
-	AudioBitrate int    `json:"AudioBitrate"`
+	Name              string  `json:"Name"`
+	Resolution        int     `json:"Resolution"`
+	Width             int     `json:"Width"`
+	BitrateMultiplier float32 `json:"BitrateMultiplier"`
+	VideoBitrate      int     `json:"VideoBitrate"`
+	AudioBitrate      int     `json:"AudioBitrate"`
 }
 
 type GENRE struct {

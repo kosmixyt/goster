@@ -84,7 +84,7 @@ func (t *TV) GetSeason(season int, createIfNotExist bool, tx *gorm.DB) *SEASON {
 		NAME:                fmt.Sprintf("Season %d", season),
 		BACKDROP_IMAGE_PATH: "",
 	}
-	tx.Save(seasonElement)
+	tx.Create(seasonElement)
 	t.SEASON = append(t.SEASON, seasonElement)
 	return seasonElement
 }

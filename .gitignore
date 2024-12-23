@@ -29,3 +29,5 @@ wrapper.exe
 streaming.db
 main.py
 streaming.db-journal
+goster.lnk
+config.save.json

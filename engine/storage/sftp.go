@@ -11,24 +11,26 @@ import (
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
+	"kosmix.fr/streaming/kosmixutil"
 )
 
 type SftpStorage struct {
 	sftpClient *sftp.Client
 	props      SftpStorageProps
+	paths      []kosmixutil.PathElement
 	name       string
 }
 
 type SftpStorageProps struct {
-	Host string   `json:"host"`
-	Port string   `json:"port"`
-	User string   `json:"user"`
-	Pass string   `json:"pass"`
-	Path []string `json:"path"`
+	Host string `json:"host"`
+	Port string `json:"port"`
+	User string `json:"user"`
+	Pass string `json:"pass"`
+	// Path []PathElement `json:"path"`
 }
 
-func (s *SftpStorage) Init(name string, channel chan error, props interface{}) {
-
+func (s *SftpStorage) Init(name string, channel chan error, props interface{}, paths []kosmixutil.PathElement) {
+	s.paths = paths
 	jsonData, err := json.Marshal(props)
 	if err != nil {
 		channel <- err
@@ -38,8 +40,8 @@ func (s *SftpStorage) Init(name string, channel chan error, props interface{}) {
 	if err != nil {
 		channel <- err
 	}
-	for _, path := range data.Path {
-		if strings.Contains(path, "@") {
+	for _, path := range paths {
+		if strings.Contains(path.Path, "@") {
 			channel <- errors.New("path cannot contain @")
 		}
 	}
@@ -79,8 +81,8 @@ func (s *SftpStorage) GetReader(path string) (io.ReadSeekCloser, error) {
 func (s *SftpStorage) GetFreeSpace(path string) (uint64, error) {
 	return 0, errors.New("cannot get free space on sftp")
 }
-func (s *SftpStorage) Paths() []string {
-	return s.props.Path
+func (s *SftpStorage) Paths() []kosmixutil.PathElement {
+	return s.paths
 }
 func (s *SftpStorage) TransferSpeed() int {
 	return 0
@@ -98,12 +100,12 @@ type FileData struct {
 	FileName   string
 	StorerDbId uint
 	Size       int64
-	ROOT_PATH  string
+	ROOT_PATH  interface{}
 }
 
-func (s *SftpStorage) RecursiveScan(path string) ([]FileData, error) {
+func (s *SftpStorage) RecursiveScan(path kosmixutil.PathElement) ([]FileData, error) {
 	var files []FileData
-	walker := s.sftpClient.Walk(path)
+	walker := s.sftpClient.Walk(path.Path)
 	for walker.Step() {
 		if err := walker.Err(); err != nil {
 			return nil, err
@@ -131,4 +133,12 @@ func (s *SftpStorage) GetWriter(path string) (io.WriteCloser, error) {
 
 func (s *SftpStorage) Rename(oldPath string, newPath string) error {
 	return s.sftpClient.Rename(oldPath, newPath)
+}
+
+func (s *SftpStorage) Type() string {
+	return "sftp"
+}
+
+func (s SftpStorage) ListDir(path string) ([]os.FileInfo, error) {
+	return s.sftpClient.ReadDir(path)
 }

@@ -93,7 +93,6 @@ func WebServer(db *gorm.DB, port string) *gin.Engine {
 	r.GET("/api/continue", func(ctx *gin.Context) { watching.DeleteFromWatchingList(ctx, db) })
 	r.GET("/api/me", func(ctx *gin.Context) { me.HandleMe(ctx, db) })
 	r.POST("/api/upload", func(ctx *gin.Context) { upload.UploadFile(ctx, db) })
-	r.GET("/api/scan", func(ctx *gin.Context) { admin.Rescan(ctx, db) })
 	r.GET("/api/share/add", func(ctx *gin.Context) { share.AddShare(ctx, db) })
 	r.GET("/api/share/get", func(ctx *gin.Context) { share.GetShare(ctx, db) })
 	r.GET("/api/share/remove", func(ctx *gin.Context) { share.DeleteShare(ctx, db) })
@@ -102,6 +101,24 @@ func WebServer(db *gorm.DB, port string) *gin.Engine {
 	r.GET("/api/torrents/file", func(ctx *gin.Context) { torrents.TorrentFileDownload(ctx, db) })
 	r.GET("/api/torrents/action", func(ctx *gin.Context) { torrents.TorrentsAction(ctx, db) })
 	r.GET("/api/torrents/storage", func(ctx *gin.Context) { admin.GetAvailablePaths(ctx, db) })
+
+	r.GET("/api/admin/metadata/get", func(ctx *gin.Context) { admin.GetTmdb(ctx, db) })
+	r.POST("/api/admin/metadata/set", func(ctx *gin.Context) { admin.SetTmdb(ctx, db) })
+
+	r.GET("/api/admin/path/add", func(ctx *gin.Context) { admin.AddPath(ctx, db) })
+	r.GET("/api/admin/scan", func(ctx *gin.Context) { admin.Rescan(ctx, db) })
+	r.GET("/api/admin/storage/browse", func(ctx *gin.Context) { admin.ListDir(ctx, db) })
+	// r.GET("/api/admin/transcoder/delete", func(ctx *gin.Context) { admin.DeleteTranscoder(ctx, db) })
+
+	r.GET("/api/admin/storages", func(ctx *gin.Context) { admin.GetStorages(ctx, db) })
+	r.GET("/api/admin/transcoders", func(ctx *gin.Context) { admin.GetTranscoders(ctx, db) })
+	r.POST("/api/admin/quality/delete", func(ctx *gin.Context) { admin.DeleteQuality(ctx, db) })
+	r.POST("/api/admin/quality/add", func(ctx *gin.Context) { admin.PostQuality(ctx, db) })
+	r.GET("/api/admin/qualitys", func(ctx *gin.Context) { admin.GetQualitys(ctx, db) })
+	r.GET("/api/admin/info", func(ctx *gin.Context) { admin.AdminInfo(ctx, db) })
+	r.GET("/api/admin/users", func(ctx *gin.Context) { admin.GetUsers(ctx, db) })
+	r.POST("/api/admin/user/delete", func(ctx *gin.Context) { admin.DeleteUser(ctx, db) })
+	r.POST("/api/admin/user/update", func(ctx *gin.Context) { admin.UpdateUser(ctx, db) })
 	fmt.Println("Starting server on port " + (port))
 	go func() {
 		if engine.IsSsl() {

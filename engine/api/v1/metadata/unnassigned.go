@@ -39,7 +39,7 @@ func GetUnAssignedMediasController(user *engine.User, db *gorm.DB) (*DraggerData
 			f := FILEMetadata{
 				ID:   file.ID,
 				NAME: file.FILENAME,
-				PATH: engine.Joins(file.ROOT_PATH, file.SUB_PATH),
+				PATH: file.SUB_PATH,
 				SIZE: file.SIZE,
 			}
 			m.FILES[i] = f
@@ -76,7 +76,7 @@ func GetUnAssignedMediasController(user *engine.User, db *gorm.DB) (*DraggerData
 					FILES:  make([]FILEMetadata, len(episode.FILES)),
 				}
 				for c, file := range episode.FILES {
-					f := FILEMetadata{ID: (file.ID), NAME: file.FILENAME, PATH: engine.Joins(file.ROOT_PATH, file.SUB_PATH), SIZE: (file.SIZE)}
+					f := FILEMetadata{ID: (file.ID), NAME: file.FILENAME, PATH: file.SUB_PATH, SIZE: (file.SIZE)}
 					e.FILES[c] = f
 				}
 				s.Episodes[b] = e
@@ -90,7 +90,7 @@ func GetUnAssignedMediasController(user *engine.User, db *gorm.DB) (*DraggerData
 	db.Where("tv_id IS NULL AND movie_id IS NULL").Find(&orphans)
 	var orphansres []FILEMetadata = make([]FILEMetadata, len(orphans))
 	for i, file := range orphans {
-		orphansres[i] = FILEMetadata{ID: (file.ID), NAME: file.FILENAME, PATH: engine.Joins(file.ROOT_PATH, file.SUB_PATH), SIZE: (file.SIZE)}
+		orphansres[i] = FILEMetadata{ID: (file.ID), NAME: file.FILENAME, PATH: file.SUB_PATH, SIZE: (file.SIZE)}
 	}
 	return &DraggerData{Movies: moviesres, Tvs: tvsres, Orphans: orphansres}, nil
 

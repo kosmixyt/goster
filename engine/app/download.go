@@ -71,7 +71,7 @@ type Upload struct {
 	Name    string
 	Storer  *MemoryStorage `gorm:"-"`
 	// !! root_path of storer
-	Storer_path string
+	Storer_path *StoragePathElement `gorm:"-"`
 	CURRENT     int64
 	TOTAL       int64
 	EPISODE     *EPISODE `gorm:"-"`
@@ -99,14 +99,13 @@ func (u *Upload) Write(p []byte) (err error) {
 }
 func (u *Upload) End() error {
 	file := &FILE{
-		FILENAME:  u.Name,
-		ROOT_PATH: u.Storer_path,
-		SUB_PATH:  "",
-		STORAGEID: &u.Storer.DbElement.ID,
-		SIZE:      u.TOTAL,
-		IS_MEDIA:  true,
-		SHARES:    make([]Share, 0),
-		WATCHING:  make([]WATCHING, 0),
+		FILENAME:           u.Name,
+		SUB_PATH:           "",
+		StoragePathElement: u.Storer_path,
+		SIZE:               u.TOTAL,
+		IS_MEDIA:           true,
+		SHARES:             make([]Share, 0),
+		WATCHING:           make([]WATCHING, 0),
 	}
 	if u.MOVIE != nil {
 		file.MOVIE = u.MOVIE

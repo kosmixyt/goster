@@ -334,7 +334,7 @@ func (t *Transcoder) Start(index int, Quality QUALITY, trackIndex int) {
 		"-c:a", "libmp3lame",
 		"-map_metadata", "-1",
 		"-force_key_frames", "expr:gte(t,n_forced*"+strconv.FormatFloat(SEGMENT_TIME, 'f', -1, 64)+")",
-		"-b:v", strconv.Itoa(Quality.VideoBitrate),
+		"-b:v", strconv.Itoa(Quality.VideoBitrate)+"k",
 	)
 
 	cmdVideo = append(cmdVideo, []string{
@@ -513,40 +513,8 @@ func (f *FFPROBE_DATA) AdaptativeQualitys() []QUALITY {
 	}
 	var ofQual = make([]QUALITY, len(QUALITYS))
 	copy(ofQual, QUALITYS)
-	ofQual[4] = QUALITY{
-		Name:         "240p",
-		Resolution:   240,
-		Width:        426,
-		VideoBitrate: int(float64(bitRate) * 0.2),
-		AudioBitrate: 64,
-	}
-	ofQual[3] = QUALITY{
-		Name:         "360p",
-		Resolution:   360,
-		Width:        640,
-		VideoBitrate: int(float64(bitRate) * 0.4),
-		AudioBitrate: 96,
-	}
-	ofQual[2] = QUALITY{
-		Name:         "480p",
-		Resolution:   480,
-		Width:        854,
-		VideoBitrate: int(float64(bitRate) * 0.6),
-		AudioBitrate: 128,
-	}
-	ofQual[1] = QUALITY{
-		Name:         "720p",
-		Resolution:   720,
-		Width:        1280,
-		VideoBitrate: int(float64(bitRate) * 0.8),
-		AudioBitrate: 192,
-	}
-	ofQual[0] = QUALITY{
-		Name:         "1080p",
-		Resolution:   1080,
-		Width:        1920,
-		VideoBitrate: int(float64(bitRate) * 1),
-		AudioBitrate: 256,
+	for i, quality := range ofQual {
+		qualitys[i].VideoBitrate = int(float64(bitRate) * float64(quality.BitrateMultiplier))
 	}
 	return ofQual
 }

@@ -35,14 +35,14 @@ type FILE struct {
 	FILENAME   string   `gorm:"not null"`
 	SUB_PATH   string   `gorm:"not null"`
 	// if storage is null, then it is the torrent download path
-	STORAGE        *StorageDbElement
-	STORAGEID      *uint      `gorm:"foreignKey:ID"`
-	ROOT_PATH      string     `gorm:"not null"`
-	SIZE           int64      `gorm:"not null"`
-	WATCHING       []WATCHING `gorm:"foreignKey:FILE_ID;constraint:OnDelete:CASCADE"`
-	SHARES         []Share    `gorm:"foreignKey:FILE_ID;constraint:OnDelete:CASCADE"`
-	SourceRecord   *Record    `gorm:"foreignKey:SourceRecordID"`
-	SourceRecordID *uint      `gorm:"default:null"`
+	// STORAGE        *StorageDbElement
+	StoragePathElement *StoragePathElement `gorm:"foreignKey:STORAGE_ID"`
+	STORAGE_ID         *uint               `gorm:"default:null"`
+	SIZE               int64               `gorm:"not null"`
+	WATCHING           []WATCHING          `gorm:"foreignKey:FILE_ID;constraint:OnDelete:CASCADE"`
+	SHARES             []Share             `gorm:"foreignKey:FILE_ID;constraint:OnDelete:CASCADE"`
+	SourceRecord       *Record             `gorm:"foreignKey:SourceRecordID"`
+	SourceRecordID     *uint               `gorm:"default:null"`
 }
 
 func (f *FILE) GetMediaType() string {
@@ -63,9 +63,27 @@ func (f *FILE) GetMediaId() int {
 	}
 	return 0
 }
+func (f *FILE) LoadPath() *StoragePathElement {
+	if f.StoragePathElement == nil {
+		db.Model(f).Preload("StoragePathElement").First(f)
+	}
+	if f.StoragePathElement == nil {
+		fmt.Println("StoragePathElement is still nil", f.FILENAME)
+	}
+
+	return f.StoragePathElement
+}
+
 func (f *FILE) GetPath(absolute bool) string {
+
 	if absolute {
-		return Joins(f.ROOT_PATH, f.SUB_PATH, f.FILENAME)
+		offset := ""
+		if f.LoadPath() == nil {
+			offset = Config.Torrents.DownloadPath
+		} else {
+			offset = f.LoadPath().Path
+		}
+		return Joins(offset, f.SUB_PATH, f.FILENAME)
 	}
 	return Joins(f.SUB_PATH, f.FILENAME)
 }
@@ -79,16 +97,11 @@ func (f *FILE) stats() (fs.FileInfo, error) {
 }
 
 func (f *FILE) LoadStorage() (*StorageDbElement, error) {
-	if f.STORAGEID == nil {
+	f.LoadPath()
+	if f.StoragePathElement == nil {
 		return nil, errors.New("storage ID is nil")
 	}
-	if f.STORAGE == nil {
-		db.Model(f).Preload("STORAGE").First(f)
-		if f.STORAGE == nil {
-			panic("Storage not found")
-		}
-	}
-	return f.STORAGE, nil
+	return f.StoragePathElement.getStorage(), nil
 }
 func (f *FILE) MoveStorage(target_store *MemoryStorage) error {
 	store, err := f.LoadStorage()
@@ -320,7 +333,7 @@ func (f *FILE) Rename(filename string) error {
 	if err != nil {
 		panic("if file is not torrent should load storage")
 	}
-	storer.toConn().Rename(f.GetPath(true), Joins(f.ROOT_PATH, f.SUB_PATH, filename))
+	storer.toConn().Rename(f.GetPath(true), Joins(f.LoadPath().Path, f.SUB_PATH, filename))
 	db.Model(f).Update("filename", filename)
 	return nil
 }

@@ -51,6 +51,11 @@ func Convert(db *gorm.DB, ctx *gin.Context, app *gin.Engine) {
 		ctx.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
+	storerPath, err := storer.DbElement.GetRootPath(root_path_of)
+	if err != nil {
+		ctx.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
 	qual := engine.GetQualityByResolution(payload.QualityRes)
 	if qual == nil {
 		ctx.JSON(400, gin.H{"error": "invalid quality_res"})
@@ -58,17 +63,17 @@ func Convert(db *gorm.DB, ctx *gin.Context, app *gin.Engine) {
 	}
 	task := user.CreateTask("Converting "+file.FILENAME, func() error { return errors.New("unimplemented") })
 	convertItem := engine.Convert{
-		SOURCE_FILE:      &file,
-		OUTPUT_FILE:      nil,
-		User:             &user,
-		Start:            time.Now(),
-		Task:             task,
-		Quality:          qual,
-		AudioTrackIndex:  uint(payload.AudioTrack),
-		FfprobeBase:      ffprobeData,
+		SOURCE_FILE:     &file,
+		OUTPUT_FILE:     nil,
+		User:            &user,
+		Start:           time.Now(),
+		Task:            task,
+		Quality:         qual,
+		AudioTrackIndex: uint(payload.AudioTrack),
+		FfprobeBase:     ffprobeData,
+
 		Paused:           false,
-		OutputStorer:     storer,
-		OutputPathStorer: root_path_of,
+		OutputPathStorer: storerPath,
 		Progress: &engine.FfmpegProgress{
 			Frame:         0,
 			Fps:           0,

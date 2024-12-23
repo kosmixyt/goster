@@ -54,19 +54,23 @@ func AddRecordController(user *engine.User, payload AddRecordPayload, db *gorm.D
 		task.SetAsError(err)
 		return err
 	}
+	storerPath, err := storer.DbElement.GetRootPath(path)
+	if err != nil {
+		task.SetAsError(err)
+		return err
+	}
 	record := engine.Record{
-		START:                time.Unix(0, payload.Start*int64(time.Millisecond)),
-		DURATION:             payload.Duration,
-		OWNER_ID:             user.ID,
-		ENDED:                false,
-		IPTV_ID:              uint(userChannel.Iptv.ID),
-		TASK_ID:              task.ID,
-		CHANNEL_ID:           payload.ChannelId,
-		Force:                payload.Force,
-		OutputStorer:         storer.DbElement,
-		OutputStorerMem:      storer,
-		OutputStorerRootPath: path,
-		OutputStorerId:       storer.DbElement.ID,
+		START:            time.Unix(0, payload.Start*int64(time.Millisecond)),
+		DURATION:         payload.Duration,
+		OWNER_ID:         user.ID,
+		ENDED:            false,
+		IPTV_ID:          uint(userChannel.Iptv.ID),
+		TASK_ID:          task.ID,
+		CHANNEL_ID:       payload.ChannelId,
+		Force:            payload.Force,
+		OutputStorerMem:  storer,
+		OutputPathStorer: storerPath,
+
 		OutputStorerFileName: "output.mp4",
 		ERROR:                "",
 	}

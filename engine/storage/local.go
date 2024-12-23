@@ -8,18 +8,21 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"kosmix.fr/streaming/kosmixutil"
 )
 
 type LocalStorage struct {
 	props LocalStorageProps
 	name  string
+	paths []kosmixutil.PathElement
 }
 type LocalStorageProps struct {
-	Path []string `json:"path"`
+	// Path []PathElement `json:"path"`
 	// TorrentPath string   `json:"torrent_path"`
 }
 
-func (l *LocalStorage) Init(name string, channel chan error, props interface{}) {
+func (l *LocalStorage) Init(name string, channel chan error, props interface{}, paths []kosmixutil.PathElement) {
 	jsonData, err := json.Marshal(props)
 	if err != nil {
 		channel <- err
@@ -29,8 +32,8 @@ func (l *LocalStorage) Init(name string, channel chan error, props interface{}) 
 	if err != nil {
 		channel <- err
 	}
-	for _, path := range data.Path {
-		if strings.Contains(path, "@") {
+	for _, path := range paths {
+		if strings.Contains(path.Path, "@") {
 			channel <- errors.New("path cannot contain @")
 		}
 	}
@@ -47,8 +50,9 @@ func (l *LocalStorage) GetReader(path string) (io.ReadSeekCloser, error) {
 	return file, nil
 }
 
-func (l *LocalStorage) Paths() []string {
-	return l.props.Path
+func (l *LocalStorage) Paths() []kosmixutil.PathElement {
+	// fmt.Println("l.props.Path", l.props.Path)
+	return l.paths
 }
 
 func (l *LocalStorage) GetFfmpegUrl(path string) (string, bool) {
@@ -63,9 +67,9 @@ func (l *LocalStorage) NeedProxy() bool {
 	return false
 }
 
-func (l *LocalStorage) RecursiveScan(path string) ([]FileData, error) {
+func (l *LocalStorage) RecursiveScan(path kosmixutil.PathElement) ([]FileData, error) {
 	var files []FileData
-	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(path.Path, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -102,4 +106,23 @@ func (l *LocalStorage) GetWriter(path string) (io.WriteCloser, error) {
 
 func (l *LocalStorage) Rename(oldPath string, newPath string) error {
 	return os.Rename(oldPath, newPath)
+}
+
+func (l *LocalStorage) Type() string {
+	return "local"
+}
+func (l *LocalStorage) ListDir(path string) ([]os.FileInfo, error) {
+	files, err := os.ReadDir(path)
+	if err != nil {
+		return nil, err
+	}
+	var infos []os.FileInfo
+	for _, file := range files {
+		info, err := file.Info()
+		if err != nil {
+			return nil, err
+		}
+		infos = append(infos, info)
+	}
+	return infos, nil
 }

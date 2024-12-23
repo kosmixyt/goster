@@ -27,13 +27,16 @@ func GetStorageConFromId(id uint) *MemoryStorage {
 	}
 	return nil
 }
-func InitStoragesConnection(locations []StorageElement) {
+func InitStoragesConnection(locations []StorageElement) error {
 	toNodeDeleteStorage := make([]uint, 0)
+	toNotDeletePath := make([]uint, 0)
 	localDeclared := false
 	for _, location := range locations {
 		if localDeclared && location.TYPE == "local" {
-			panic("Local storage already declared")
+			// panic("Local storage already declared")
+			return fmt.Errorf("2 Local storage declared")
 		}
+
 		if location.TYPE == "local" {
 			localDeclared = true
 		}
@@ -41,61 +44,90 @@ func InitStoragesConnection(locations []StorageElement) {
 		if err != nil {
 			panic(err)
 		}
-
 		fmt.Println("Initiating storage: ", location.Name)
 		channel := make(chan error)
-		go storage.Init(location.Name, channel, location.Options)
+		go storage.Init(location.Name, channel, location.Options, location.Paths)
 		err = <-channel
 		if err != nil {
-			panic(err)
+			for _, _ = range Storages {
+				// stor.Conn.
+			}
+			return err
 		}
-		fmt.Println("Storage initiated: ", location.Name)
+		fmt.Println("Storage initiated: ", location.Name, len(storage.Paths()))
 		var ExistantStorage StorageDbElement
 		if tx := db.Where("name = ?", storage.Name()).First(&ExistantStorage); tx.Error != nil {
 			StorageDbElement := StorageDbElement{
 				Name:  storage.Name(),
-				Roots: strings.Join(storage.Paths(), ","),
-				FILES: []FILE{},
+				Paths: []*StoragePathElement{},
 			}
 			if tx := db.Create(&StorageDbElement); tx.Error != nil {
 				panic(tx.Error)
 			}
+			for _, path := range storage.Paths() {
+				PathElement := StoragePathElement{
+					Path:      path.Path,
+					StorageId: StorageDbElement.ID,
+					Size:      path.Size,
+					Files:     []*FILE{},
+					Records:   []*Record{},
+				}
+				if tx := db.Create(&PathElement); tx.Error != nil {
+					panic(tx.Error)
+				}
+				StorageDbElement.Paths = append(StorageDbElement.Paths, &PathElement)
+				toNotDeletePath = append(toNotDeletePath, PathElement.ID)
+			}
 			toNodeDeleteStorage = append(toNodeDeleteStorage, StorageDbElement.ID)
 			ExistantStorage = StorageDbElement
 		} else {
-			ExistantStorage.Roots = strings.Join(storage.Paths(), ",")
-			if tx := db.Save(&ExistantStorage); tx.Error != nil {
-				panic(tx.Error)
+			for _, path := range storage.Paths() {
+				var ExistantPath StoragePathElement
+				if tx := db.Where("path = ? AND storage_id = ?", path.Path, ExistantStorage.ID).First(&ExistantPath); tx.Error != nil {
+					ExistantPath = StoragePathElement{
+						Path:      path.Path,
+						StorageId: ExistantStorage.ID,
+						Files:     []*FILE{},
+						Records:   []*Record{},
+					}
+					if tx := db.Create(&ExistantPath); tx.Error != nil {
+						panic(tx.Error)
+					}
+				}
+				ExistantStorage.Paths = append(ExistantStorage.Paths, &ExistantPath)
+				toNotDeletePath = append(toNotDeletePath, ExistantPath.ID)
 			}
 			toNodeDeleteStorage = append(toNodeDeleteStorage, ExistantStorage.ID)
 		}
-		fmt.Println("Storage: ", ExistantStorage.Name, "Roots: ", ExistantStorage.Roots)
 		Storages = append(Storages, &MemoryStorage{
 			Conn:      storage,
 			DbElement: &ExistantStorage,
 		})
 	}
 	db.Where("id NOT IN ?", toNodeDeleteStorage).Delete(&StorageDbElement{})
+	db.Where("id NOT IN ?", toNotDeletePath).Delete(&StoragePathElement{})
+	return nil
 }
 func Scan(db *gorm.DB) {
 	var files_ar []*storage.FileData
 	for _, storage := range Storages {
-		for _, path := range storage.Conn.Paths() {
-			fmt.Println("Scanning path: ", path, "of", storage.DbElement.Name)
-			files, err := storage.Conn.RecursiveScan(path)
+		storage.DbElement.LoadPaths()
+		for _, path := range storage.DbElement.Paths {
+			fmt.Println("Scanning path: ", path, "of", storage.DbElement)
+			files, err := storage.Conn.RecursiveScan(path.toStorage())
 			if err != nil {
+				fmt.Println(path.Path)
 				panic(err)
 			}
 			for _, f := range files {
 				f.ROOT_PATH = path
-				f.Path = strings.TrimSuffix(strings.TrimPrefix(f.Path, f.ROOT_PATH), f.FileName)
+				f.Path = strings.TrimSuffix(strings.TrimPrefix(f.Path, path.Path), f.FileName)
 				f.StorerDbId = storage.DbElement.ID
 				files_ar = append(files_ar, &f)
 			}
 
 		}
 	}
-
 	tonotDelete := make([]uint, 0)
 	for i, file := range files_ar {
 		if strings.Contains(file.FileName, "$") {
@@ -103,14 +135,13 @@ func Scan(db *gorm.DB) {
 		}
 		var fileInDb FILE
 		isVideoFile := kosmixutil.IsVideoFile(file.FileName)
-		if err := db.Preload("STORAGE").Where("filename = ? AND storage_id = ? AND sub_path = ? AND root_path = ? AND is_media = ?", file.FileName, file.StorerDbId, file.Path, file.ROOT_PATH, isVideoFile).First(&fileInDb).Error; err != nil {
+		if err := db.Preload("StoragePathElement").Where("filename = ?  AND sub_path = ? AND is_media = ?", file.FileName, file.Path, isVideoFile).First(&fileInDb).Error; err != nil {
 			fileInDb = FILE{
-				FILENAME:  file.FileName,
-				SUB_PATH:  strings.TrimPrefix(file.Path, file.ROOT_PATH),
-				SIZE:      file.Size,
-				IS_MEDIA:  isVideoFile,
-				ROOT_PATH: file.ROOT_PATH,
-				STORAGEID: &file.StorerDbId,
+				FILENAME:           file.FileName,
+				SUB_PATH:           strings.TrimPrefix(file.Path, file.ROOT_PATH.(*StoragePathElement).Path),
+				SIZE:               file.Size,
+				IS_MEDIA:           isVideoFile,
+				StoragePathElement: file.ROOT_PATH.(*StoragePathElement),
 			}
 			Year := kosmixutil.GetYear(file.FileName)
 			if isVideoFile {
@@ -192,7 +223,7 @@ func Scan(db *gorm.DB) {
 			tonotDelete = append(tonotDelete, fileInDb.ID)
 		} else {
 			fmt.Println("File found in database, skipping it", i)
-			fmt.Println("File: ", fileInDb.FILENAME, "Path: ", fileInDb.ROOT_PATH, fileInDb.SUB_PATH, "Size: ", fileInDb.SIZE, "Is media: ", fileInDb.IS_MEDIA, "ID: ", fileInDb.ID)
+			fmt.Println("File: ", fileInDb.FILENAME, fileInDb.SUB_PATH, "Size: ", fileInDb.SIZE, "Is media: ", fileInDb.IS_MEDIA, "ID: ", fileInDb.ID)
 			tonotDelete = append(tonotDelete, fileInDb.ID)
 		}
 	}

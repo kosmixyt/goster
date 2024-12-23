@@ -32,6 +32,26 @@ func ReadFile(path string) []byte {
 	}
 	return body
 }
+func (channel *IptvChannel) Skinny() SKINNY_RENDER {
+	return SKINNY_RENDER{
+		ID:            strconv.FormatInt(channel.Id, 10),
+		WATCH:         WatchData{},
+		TYPE:          "iptv",
+		NAME:          channel.Name,
+		LOGO:          channel.Logo_url,
+		BACKDROP:      channel.Logo_url,
+		POSTER:        channel.Logo_url,
+		TRAILER:       "",
+		DESCRIPTION:   fmt.Sprintf("Iptv channel %s", channel.Name),
+		YEAR:          0,
+		RUNTIME:       "",
+		GENRE:         []GenreItem{},
+		WATCHLISTED:   false,
+		TRANSCODE_URL: "",
+		PROVIDERS:     []PROVIDERItem{},
+		DisplayData:   "",
+	}
+}
 func (iptv *IptvItem) GetGroup(name string) *IptvGroup {
 	if name == "" {
 		return nil
@@ -177,19 +197,6 @@ func (iptv *IptvItem) GetChannel(channel_id int) *IptvChannel {
 func (ptv *IptvItem) public() bool {
 	return strings.Contains(ptv.FileName, "public")
 }
-func (record *Record) GetStorer() *MemoryStorage {
-	if record.OutputStorer != nil {
-		return record.OutputStorerMem
-	}
-	store := GetStorageConFromId(record.OutputStorerId)
-	if store == nil {
-		panic("Storage not found")
-	}
-	record.OutputStorer = store.DbElement
-	record.OutputStorerMem = store
-
-	return store
-}
 
 func (record *Record) LoadTask() {
 	if record.TASK_ID == 0 {
@@ -233,7 +240,7 @@ func (record *Record) Init() {
 		db.Model(&record).Updates(Record{ERROR: "Channel not found", ENDED: true})
 		return
 	}
-	ffmpeg_output, on_finish, err := CreateTempFfmpegOutputFile(record.GetStorer(), record.OutputStorerRootPath, record.OutputStorerFileName)
+	ffmpeg_output, on_finish, err := CreateTempFfmpegOutputFile(record.OutputPathStorer, record.OutputStorerFileName)
 	if err != nil {
 		db.Model(&record).Updates(Record{ERROR: err.Error(), ENDED: true})
 		return
@@ -323,7 +330,7 @@ func (record *Record) Init() {
 		})
 		return
 	}
-	stats, err := record.OutputStorerMem.Conn.Stats(Joins(record.OutputStorerRootPath, record.OutputStorerFileName))
+	stats, err := record.OutputStorerMem.Conn.Stats(Joins(record.OutputPathStorer.Path, record.OutputStorerFileName))
 	if err != nil {
 		db.Model(&record).Updates(Record{
 			ERROR: err.Error(),
@@ -332,15 +339,13 @@ func (record *Record) Init() {
 		return
 	}
 	newFile := &FILE{
-		ROOT_PATH:      record.OutputStorerRootPath,
-		STORAGEID:      &record.OutputStorerId,
-		STORAGE:        record.GetStorer().DbElement,
-		SourceRecord:   record,
-		SourceRecordID: &record.ID,
-		SUB_PATH:       "",
-		FILENAME:       record.OutputStorerFileName,
-		IS_MEDIA:       true,
-		SIZE:           stats.Size(),
+		StoragePathElement: record.OutputPathStorer,
+		SourceRecord:       record,
+		SourceRecordID:     &record.ID,
+		SUB_PATH:           "",
+		FILENAME:           record.OutputStorerFileName,
+		IS_MEDIA:           true,
+		SIZE:               stats.Size(),
 	}
 	if record.OUTPUT_EPISODE != nil {
 		newFile.EPISODE_ID = *record.OUTPUT_EPISODE_ID
@@ -383,16 +388,18 @@ func GetIptvFileFromUrl(url string) (io.Reader, error) {
 	}
 	return resp.Body, nil
 }
-func CreateTempFfmpegOutputFile(storage *MemoryStorage, output_root_path string, fileName string) (string, *func(bool, *Task) error, error) {
-	if !storage.DbElement.HasRootPath(output_root_path) {
-		return "", nil, fmt.Errorf("invalid output root path")
-	}
+func CreateTempFfmpegOutputFile(outputStorer *StoragePathElement, fileName string) (string, *func(bool, *Task) error, error) {
 	nilfunc := func(f bool, task *Task) error {
-
 		return nil
 	}
-	if !storage.Conn.NeedProxy() {
-		return Joins(output_root_path, fileName), &nilfunc, nil
+	// if !outputStorer.getStorage() {
+	// return Joins(output_root_path, fileName), &nilfunc, nil
+	// }
+	if outputStorer.getStorage() == nil {
+		return Joins(Config.Torrents.DownloadPath, fileName), &nilfunc, nil
+	}
+	if !outputStorer.getStorage().toConn().NeedProxy() {
+		return Joins(outputStorer.Path, fileName), &nilfunc, nil
 	}
 	file_name_extension := filepath.Ext(fileName)
 	temp_file_name := uuid.NewString() + file_name_extension
@@ -406,7 +413,7 @@ func CreateTempFfmpegOutputFile(storage *MemoryStorage, output_root_path string,
 		if cancel {
 			return os.Remove(temp_file_path)
 		}
-		writer, err := storage.Conn.GetWriter(Joins(output_root_path, fileName))
+		writer, err := outputStorer.getStorage().toConn().GetWriter(Joins(outputStorer.Path, fileName))
 		if err != nil {
 			return err
 		}

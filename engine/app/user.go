@@ -16,7 +16,7 @@ type User struct {
 	gorm.Model
 	ID                    uint    `gorm:"unique;not null,primary_key"` // use
 	NAME                  string  `gorm:"not null"`
-	EMAIL                 string  `gorm:"unique"`
+	EMAIL                 string  `gorm:"not null"`
 	TOKEN                 string  `gorm:"unique;not null"`
 	ADMIN                 bool    `gorm:"not null,default:false"`
 	CAN_DOWNLOAD          bool    `gorm:"not null"`
@@ -484,12 +484,17 @@ func (user *User) Upload(Storer *MemoryStorage, outPath string, name string, tot
 	if !Storer.DbElement.HasRootPath(outPath) {
 		return nil, fmt.Errorf("outpath is not a root path of Storer")
 	}
+	root_path, err := Storer.DbElement.GetRootPath(outPath)
+	if err != nil {
+		return nil, err
+	}
+
 	upl := &Upload{
 		USER_ID:     user.ID,
 		Name:        name,
 		EPISODE:     EPISODE,
 		MOVIE:       MOVIE,
-		Storer_path: outPath,
+		Storer_path: root_path,
 		Storer:      Storer,
 		Writer:      file,
 		CURRENT:     0,
