@@ -13,8 +13,7 @@ func RescanController(user *engine.User, db *gorm.DB) error {
 	if !user.ADMIN {
 		return engine.ErrorIsNotAdmin
 	}
-	engine.Scan(db)
-	return nil
+	return engine.Scan(db)
 }
 
 func Rescan(ctx *gin.Context, db *gorm.DB) {
@@ -147,15 +146,28 @@ func DeleteStorageController(user *engine.User, name string) error {
 	return nil
 }
 
-func CreateStorage(ctx *gin.Context, db *gorm.DB) {}
-
 type CreateStoragesRequest struct {
 	Name    string            `json:"name"`
 	TYPE    string            `json:"type"`
 	OPTIONS map[string]string `json:"options"`
 }
 
-func CreateStorageController(user *engine.User) error {
+func CreateStorage(ctx *gin.Context, db *gorm.DB) {
+	user, err := engine.GetUser(db, ctx, []string{})
+	if err != nil {
+		ctx.JSON(401, gin.H{"error": "not logged in"})
+		return
+	}
+	var payload CreateStoragesRequest
+	err = ctx.BindJSON(&payload)
+	if err != nil {
+		ctx.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	err = CreateStorageController(&user, payload)
+}
+
+func CreateStorageController(user *engine.User, payload CreateStoragesRequest) error {
 	if !user.ADMIN {
 		return engine.ErrorIsNotAdmin
 	}

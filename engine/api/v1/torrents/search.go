@@ -93,7 +93,7 @@ func SearchTorrents(ctx *gin.Context, db *gorm.DB) {
 		ctx.JSON(401, gin.H{"error": "not logged in"})
 		return
 	}
-	query := ctx.Query("query")
+	query := ctx.Query("q")
 	metadata := ctx.Query("metadata")
 	d, err := SearchTorrentsController(db, &user, query, metadata)
 	if err != nil {

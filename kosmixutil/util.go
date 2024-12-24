@@ -220,30 +220,31 @@ func ServerRangeRequest(ctx *gin.Context, size int64, reader io.ReadSeekCloser, 
 	reader.Close()
 
 }
-func ServerNonSeekable(ctx *gin.Context, reader io.ReadCloser) {
-	ctx.Status(200)
-	ctx.Writer.WriteHeaderNow()
-	for {
-		buf := make([]byte, 1024)
-		n, err := reader.Read(buf)
-		if err != nil {
-			if err == io.EOF {
-				fmt.Println("EOF")
-				break
-			}
-			panic(err)
-		}
-		_, err = ctx.Writer.Write(buf[:n])
-		if err != nil {
-			panic(err)
-		}
-		ctx.Writer.Flush()
-	}
-	err := reader.Close()
-	if err != nil {
-		panic(err)
-	}
-}
+
+//	func ServerNonSeekable(ctx *gin.Context, reader io.ReadCloser) {
+//		ctx.Status(200)
+//		ctx.Writer.WriteHeaderNow()
+//		for {
+//			buf := make([]byte, 1024)
+//			n, err := reader.Read(buf)
+//			if err != nil {
+//				if err == io.EOF {
+//					fmt.Println("EOF")
+//					break
+//				}
+//				panic(err)
+//			}
+//			_, err = ctx.Writer.Write(buf[:n])
+//			if err != nil {
+//				panic(err)
+//			}
+//			ctx.Writer.Flush()
+//		}
+//		err := reader.Close()
+//		if err != nil {
+//			panic(err)
+//		}
+//	}
 func FormatFilenameForContentDisposition(filename string) string {
 	// Remplacer les caractères interdits par des tirets bas
 	filename = strings.Map(func(r rune) rune {

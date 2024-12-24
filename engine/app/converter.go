@@ -126,10 +126,15 @@ func (c *Convert) Convert(app *gin.Engine) (*FILE, error) {
 		"-y"}...)
 	fmt.Println("ffmpeg", args)
 	c.Command = exec.Command(Config.Transcoder.FFMPEG, args...)
-	read := c.SOURCE_FILE.GetReader()
-	if read == nil {
+	// read := c.SOURCE_FILE.GetReader()
+	// if read == nil {
+	// 	(*on_finish)(true, c.Task)
+	// 	panic("read is nil")
+	// }
+	read, err := c.SOURCE_FILE.GetReader()
+	if err != nil {
 		(*on_finish)(true, c.Task)
-		panic("read is nil")
+		return nil, err
 	}
 	stdin, err := c.Command.StdinPipe()
 	if err != nil {

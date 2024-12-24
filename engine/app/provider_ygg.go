@@ -28,7 +28,10 @@ const YGG_URL = "https://www.ygg.re"
 
 var MovieCategoryYgg []int = []int{2183}
 var TvCategoryYgg []int = []int{2184}
+
 var UrlToDownloadId = regexp2.MustCompile(`\/([0-9]{3,})`, 0)
+var last_response_time time.Duration = time.Duration(0) * time.Second
+var total_fetched int = 0
 
 type Flaresolverr struct {
 	Status   string `json:"status"`
@@ -96,13 +99,37 @@ var dialer *net.Dialer = &net.Dialer{
 }
 
 var YGG YggTorrent = YggTorrent{
-	Cookie:    "",
-	connected: false,
-	client:    nil,
+	Cookie:      "",
+	connected:   false,
+	client:      nil,
+	credentials: map[string]string{},
 }
 
+func (y *YggTorrent) TotalFetched() int64 {
+	return int64(total_fetched)
+}
+func (y *YggTorrent) LastResponseTime() time.Duration {
+	return last_response_time
+}
 func (y *YggTorrent) Enabled() bool {
-	return Config.TorrentProviders.YGG.Username != ""
+	return y.credentials["username"] != "" && y.credentials["password"] != "" && y.connected
+}
+func (y *YggTorrent) Name() string {
+	return "ygg"
+}
+func (y *YggTorrent) Test() error {
+	if y.Cookie == "" {
+		return errors.New("Not connected")
+	}
+	channel_torrents := make(chan []*Torrent_File)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go y.Search("movie", "test", channel_torrents, &wg)
+	wg.Wait()
+	if len(<-channel_torrents) == 0 {
+		return errors.New("Failed to get torrents")
+	}
+	return nil
 }
 
 func ParseProxyUrl() *url.URL {
@@ -167,7 +194,7 @@ func InitHttpClient() error {
 	return errors.New("invalid challenge type :" + challenge_type)
 }
 
-func (y *YggTorrent) Init() error {
+func (y *YggTorrent) TryEnable(credentials map[string]string) error {
 	var err error
 	if err := InitHttpClient(); err != nil {
 		return err
@@ -176,19 +203,22 @@ func (y *YggTorrent) Init() error {
 	if err != nil {
 		return err
 	}
-	if success, err := YGG.Login(); !success {
+	if credentials["username"] == "" || credentials["password"] == "" {
+		return errors.New("credentials not found")
+	}
+	if success, err := YGG.Login(credentials); !success {
 		fmt.Println("Failed to connect to ygg torrent [first attempt]", err.Error())
 		return err
-	} else {
-		y.connected = true
 	}
+	y.connected = true
+	y.credentials = credentials
 	go func() {
 		a := 0
 		for {
 			time.Sleep(30 * time.Minute)
 			YGG.RefreshCookie()
 			a += 1
-			if success, err := y.Login(); !success {
+			if success, err := y.Login(y.credentials); !success {
 				y.connected = false
 				fmt.Println("Failed to connect to ygg torrent", err.Error(), "attemp : ", a)
 			} else {
@@ -347,13 +377,13 @@ func (y *YggTorrent) GetClearance() (string, string, error) {
 	}
 	panic("Invalid challenge type " + challenge_type)
 }
-func (y *YggTorrent) Login() (bool, error) {
+func (y *YggTorrent) Login(credentials map[string]string) (bool, error) {
 	url := YGG_URL + "/auth/process_login"
 	method := "POST"
 	body := &bytes.Buffer{}
 	formData := multipart.NewWriter(body)
-	formData.WriteField("id", Config.TorrentProviders.YGG.Username)
-	formData.WriteField("pass", Config.TorrentProviders.YGG.Password)
+	formData.WriteField("id", credentials["username"])
+	formData.WriteField("pass", credentials["password"])
 	formData.WriteField("ci_csrf_token", "")
 	req, err := http.NewRequest(method, url, body)
 	if err != nil {
@@ -384,10 +414,11 @@ func (y *YggTorrent) isCloudFlareRejects(body io.Reader) bool {
 }
 
 type YggTorrent struct {
-	Cookie    string
-	client    *http.Client
-	UserAgent string
-	connected bool
+	Cookie      string
+	client      *http.Client
+	UserAgent   string
+	connected   bool
+	credentials map[string]string
 }
 
 func GetSearchUrl(Type string, name string) string {
@@ -404,6 +435,7 @@ func GetSearchUrl(Type string, name string) string {
 	panic("Type not found")
 }
 func (y *YggTorrent) RefreshCookie() {
+
 	var err error
 	y.UserAgent, y.Cookie, err = y.GetClearance()
 	if err != nil {
@@ -421,6 +453,7 @@ func FormatTorrentNameSearch(name string) string {
 var index = 0
 
 func (y *YggTorrent) Search(Type string, query string, channel chan [](*Torrent_File), wg *sync.WaitGroup) {
+	start := time.Now()
 	defer wg.Done()
 	if y.Cookie == "" {
 		channel <- []*Torrent_File{}
@@ -478,7 +511,7 @@ func (y *YggTorrent) Search(Type string, query string, channel chan [](*Torrent_
 					element.SEED = seedInt
 				}
 			})
-			element.PROVIDER = "ygg"
+			element.PROVIDER = y.Name()
 			element.LastFetch = time.Now()
 			torrents = append(torrents, &element)
 
@@ -491,11 +524,14 @@ func (y *YggTorrent) Search(Type string, query string, channel chan [](*Torrent_
 		WriteFile(strings.NewReader(strbody), "ygg-"+strconv.Itoa(index)+".html")
 		// panic("No body found")
 	}
+	fmt.Println("Time to fetch ygg : ", time.Since(start))
+	last_response_time = time.Since(start)
 	channel <- torrents
 }
 func (y *YggTorrent) FetchTorrentFile(t *Torrent_File) (io.Reader, error) {
+	total_fetched = total_fetched + 1
 	if !y.connected {
-		if success, _ := y.Login(); !success {
+		if success, _ := y.Login(y.credentials); !success {
 			panic("Failed to Login to ygg torrent")
 		}
 	}
@@ -526,7 +562,7 @@ type byIndexCategory map[uint][]*Torrent_File
 
 func (y *YggTorrent) FetchNewItems() byIndexCategory {
 	if !y.connected {
-		if success, _ := y.Login(); !success {
+		if success, _ := y.Login(y.credentials); !success {
 			panic("Failed to Login to ygg torrent")
 		}
 	}
@@ -584,7 +620,7 @@ func (y *YggTorrent) FetchNewItems() byIndexCategory {
 					torrentItemFromlink.NAME = s.Text()
 				}
 			})
-			torrentItemFromlink.PROVIDER = "ygg"
+			torrentItemFromlink.PROVIDER = y.Name()
 			intSeed, err := strconv.Atoi(tableau[7].(string))
 			if err != nil {
 				panic(err)

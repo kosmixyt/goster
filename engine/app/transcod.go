@@ -3,6 +3,7 @@ package engine
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -25,14 +26,11 @@ const (
 	FormatZero = 5
 )
 
-var INTRO_DURATION = 4.02
-
 type Transcoder struct {
 	// watching must have user , movie | episode preloaded
-	UUID            string
-	Task            *Task
-	FFPROBE_TIMEOUT time.Duration
-	ISLIVESTREAM    bool
+	UUID         string
+	Task         *Task
+	ISLIVESTREAM bool
 	// WATCHING        *WATCHING
 	ON_PROGRESS    func(int64, int64)
 	ON_REQ_TIMEOUT func(*Transcoder)
@@ -82,15 +80,15 @@ func (t *Transcoder) Manifest(Manifest chan string) {
 			}
 			time.Sleep(10 * time.Millisecond)
 		}
-		manifest := []string{"#EXTM3U", "#EXT-X-VERSION:3", "#EXT-X-TARGETDURATION:" + strconv.Itoa(SEGMENT_TIME+1), "#EXT-X-MEDIA-SEQUENCE:0", "#EXT-X-PLAYLIST-TYPE:VOD"}
+		manifest := []string{"#EXTM3U", "#EXT-X-VERSION:3", "#EXT-X-TARGETDURATION:" + strconv.Itoa(int(Config.Transcoder.SEGMENT_TIME)+1), "#EXT-X-MEDIA-SEQUENCE:0", "#EXT-X-PLAYLIST-TYPE:VOD"}
 		duration := t.LENGTH
-		for i := float64(0); i < float64(duration); i = i + SEGMENT_TIME {
-			stime := SEGMENT_TIME
-			if i+SEGMENT_TIME > float64(duration) {
+		for i := float64(0); i < float64(duration); i = i + Config.Transcoder.SEGMENT_TIME {
+			stime := Config.Transcoder.SEGMENT_TIME
+			if i+Config.Transcoder.SEGMENT_TIME > float64(duration) {
 				stime = float64(duration) - i
 			}
 			manifest = append(manifest, "#EXTINF:"+fmt.Sprintf("%.*f", 3, stime))
-			index := i / SEGMENT_TIME
+			index := i / Config.Transcoder.SEGMENT_TIME
 			manifest = append(manifest, Config.Web.PublicUrl+"/transcode/segment/"+t.UUID+"/"+strconv.Itoa(int(index)))
 		}
 		manifest = append(manifest, "#EXT-X-ENDLIST")
@@ -101,9 +99,9 @@ func (t *Transcoder) Manifest(Manifest chan string) {
 		if t.FFMPEG == nil {
 			t.Start(0, t.QUALITYS[0], 0)
 		}
-		manifest := []string{"#EXTM3U", "#EXT-X-TARGETDURATION:" + strconv.Itoa(SEGMENT_TIME+1), "#EXT-X-VERSION:3", "#EXT-X-MEDIA-SEQUENCE:0", "#EXT-X-PLAYLIST-TYPE:EVENT"}
+		manifest := []string{"#EXTM3U", "#EXT-X-TARGETDURATION:" + strconv.Itoa(int(Config.Transcoder.SEGMENT_TIME)+1), "#EXT-X-VERSION:3", "#EXT-X-MEDIA-SEQUENCE:0", "#EXT-X-PLAYLIST-TYPE:EVENT"}
 		for i := 0; i < int(t.CURRENT_INDEX+1); i++ {
-			manifest = append(manifest, "#EXTINF:"+fmt.Sprintf("%.*f", 3, SEGMENT_TIME))
+			manifest = append(manifest, "#EXTINF:"+fmt.Sprintf("%.*f", 3, Config.Transcoder.SEGMENT_TIME))
 			manifest = append(manifest, Config.Web.PublicUrl+"/transcode/segment/"+t.UUID+"/"+strconv.Itoa(i))
 		}
 		Manifest <- strings.Join(manifest, "\n")
@@ -125,7 +123,7 @@ out:
 			return fmt.Errorf("cancelled")
 		default:
 			t.Task.AddLog("Requesting Ffprobe Data")
-			tempData, err := FfprobeData(t.FFURL, t.FFPROBE_TIMEOUT)
+			tempData, err := FfprobeData(t.FFURL, time.Duration(Config.Transcoder.FFPROBE_TIMEOUT)*time.Second)
 			if err != nil {
 				fmt.Println("Error getting data", err)
 				t.Task.AddLog("Error getting data", err.Error(), " Stopp")
@@ -166,7 +164,7 @@ out:
 	t.FETCHING_DATA = false
 	t.CURRENT_TRACK = data.FirstAudioStream().Index
 	t.CURRENT_INDEX = 0
-	t.CHUNK_LENGTH = int64(t.LENGTH / (SEGMENT_TIME))
+	t.CHUNK_LENGTH = int64(t.LENGTH / (float64(Config.Transcoder.SEGMENT_TIME)))
 	return nil
 }
 func (t *Transcoder) HasAudioStream(index int) bool {
@@ -175,9 +173,9 @@ func (t *Transcoder) HasAudioStream(index int) bool {
 func (t *Transcoder) SetCurrentTime(time int64, currentIndex int) {
 	// t.CURRENT_INDEX = int64(time)
 	if time != 0 {
-		t.ON_PROGRESS(time, int64(t.LENGTH)*int64(SEGMENT_TIME))
+		t.ON_PROGRESS(time, int64(t.LENGTH)*int64(Config.Transcoder.SEGMENT_TIME))
 	} else {
-		t.ON_PROGRESS(int64(currentIndex)*int64(SEGMENT_TIME), int64(t.LENGTH)*int64(SEGMENT_TIME))
+		t.ON_PROGRESS(int64(currentIndex)*int64(Config.Transcoder.SEGMENT_TIME), int64(t.LENGTH)*int64(Config.Transcoder.SEGMENT_TIME))
 	}
 }
 func (t *Transcoder) Chunk(index int, quality QUALITY, trackIndex int) (io.Reader, error) {
@@ -304,7 +302,7 @@ func (t *Transcoder) Start(index int, Quality QUALITY, trackIndex int) {
 	t.START_INDEX = int64(index)
 	var args = []string{}
 	if index > 0 {
-		ss := (index * int(SEGMENT_TIME))
+		ss := (index * int(Config.Transcoder.SEGMENT_TIME))
 		args = append(args, "-ss", strconv.Itoa(ss))
 	}
 	cmdHead := []string{}
@@ -333,7 +331,7 @@ func (t *Transcoder) Start(index int, Quality QUALITY, trackIndex int) {
 		"-sc_threshold", "0",
 		"-c:a", "libmp3lame",
 		"-map_metadata", "-1",
-		"-force_key_frames", "expr:gte(t,n_forced*"+strconv.FormatFloat(SEGMENT_TIME, 'f', -1, 64)+")",
+		"-force_key_frames", "expr:gte(t,n_forced*"+strconv.FormatFloat((Config.Transcoder.SEGMENT_TIME), 'f', -1, 64)+")",
 		"-b:v", strconv.Itoa(Quality.VideoBitrate)+"k",
 	)
 
@@ -353,7 +351,7 @@ func (t *Transcoder) Start(index int, Quality QUALITY, trackIndex int) {
 		"-segment_time_delta", "0.1",
 		"-segment_format", "mpegts",
 		"-segment_list", "pipe:1",
-		"-segment_time", strconv.FormatFloat(SEGMENT_TIME, 'f', -1, 64),
+		"-segment_time", strconv.FormatFloat(float64(Config.Transcoder.SEGMENT_TIME), 'f', -1, 64),
 		"-segment_start_number", strconv.Itoa(index),
 	}
 	cmdFlags := []string{
@@ -408,8 +406,8 @@ func (t *Transcoder) Start(index int, Quality QUALITY, trackIndex int) {
 			if currentInstance != t.FFMPEG.Process.Pid {
 				break
 			}
-			if (*t.Last_request_time).Add(REQUEST_TIMEOUT).Before(time.Now()) && !t.Request_pending {
-				fmt.Println("killing ffmpeg", REQUEST_TIMEOUT)
+			if (*t.Last_request_time).Add(time.Duration(Config.Transcoder.REQUEST_TIMEOUT)*time.Second).Before(time.Now()) && !t.Request_pending {
+				fmt.Println("killing ffmpeg", Config.Transcoder.REQUEST_TIMEOUT)
 				t.ON_REQ_TIMEOUT(t)
 				t.Task.AddLog("Request timeout killing ffmpeg")
 				if t.FFMPEG != nil {
@@ -511,11 +509,12 @@ func (f *FFPROBE_DATA) AdaptativeQualitys() []QUALITY {
 		fmt.Println("Error parsing bit rate", bit_rate)
 		return qualitys
 	}
-	var ofQual = make([]QUALITY, len(QUALITYS))
-	copy(ofQual, QUALITYS)
+	var ofQual = make([]QUALITY, len(Config.Transcoder.Qualitys))
+	copy(ofQual, Config.Transcoder.Qualitys)
 	for i, quality := range ofQual {
 		qualitys[i].VideoBitrate = int(float64(bitRate) * float64(quality.BitrateMultiplier))
 	}
+	fmt.Println("Qualitys", qualitys)
 	return ofQual
 }
 func (f *FFPROBE_DATA) AudioStreams() []FFPROBE_STREAM {
@@ -675,15 +674,13 @@ func Create206Allowed(app *gin.Engine, file *FILE, user *User) string {
 	}
 	id := uuid.New().String()
 	app.GET("/api/stream/"+id, func(ctx *gin.Context) {
-		if reader := file.GetReader(); reader != nil {
-			ctx.Writer.Header().Set("Content-Type", "video/mp4")
-			ctx.Writer.Header().Set("Content-Disposition", "attachment; filename="+file.FILENAME)
-			kosmixutil.ServerRangeRequest(ctx, file.SIZE, reader, false, false)
+		// if reader := file.GetReader(); reader != nil {
+		reader, err := file.GetReader()
+		if err != nil {
+			ctx.JSON(400, gin.H{"error": err.Error()})
 			return
 		}
-		if reader := file.GetNonSeekableReader(); reader != nil {
-			kosmixutil.ServerNonSeekable(ctx, reader)
-		}
+		kosmixutil.ServerRangeRequest(ctx, file.SIZE, reader, true, true)
 	})
 	return Config.Web.PublicUrl + "/stream/" + id
 }
@@ -691,14 +688,14 @@ func Create206Allowed(app *gin.Engine, file *FILE, user *User) string {
 func GetFfUrl(app *gin.Engine, file *FILE) string {
 	uniqid := uuid.New().String()
 	app.GET("/api/temp/"+uniqid, func(ctx *gin.Context) {
-		if reader := file.GetReader(); reader != nil {
-			ctx.Writer.Header().Set("Content-Disposition", "attachment; filename="+file.FILENAME)
-			kosmixutil.ServerRangeRequest(ctx, file.SIZE, reader, true, true)
+		reader, err := file.GetReader()
+		if err != nil {
+			ctx.JSON(400, gin.H{"error": err.Error()})
 			return
 		}
-		if reader := file.GetNonSeekableReader(); reader != nil {
-			kosmixutil.ServerNonSeekable(ctx, reader)
-		}
+		ctx.Writer.Header().Set("Content-Disposition", "attachment; filename="+file.FILENAME)
+		kosmixutil.ServerRangeRequest(ctx, file.SIZE, reader, true, true)
+
 	})
 	return GetPrivateUrl() + "/api/temp/" + uniqid
 }
@@ -767,8 +764,8 @@ func FfprobeData(source interface{}, timeout time.Duration) (*FFPROBE_DATA, erro
 			"pipe:0",
 		}...)
 	}
-
-	command := exec.Command(Config.Transcoder.FFPROBE, args...)
+	ctx, _ := context.WithDeadline(context.Background(), time.Now().Add(timeout))
+	command := exec.CommandContext(ctx, Config.Transcoder.FFPROBE, args...)
 	command.Env = os.Environ()
 
 	fmt.Println(strings.Join(command.Args, " "))

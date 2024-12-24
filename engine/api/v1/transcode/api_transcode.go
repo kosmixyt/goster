@@ -159,7 +159,6 @@ func NewTranscoderController(
 			ON_DESTROY:        on_destroy,
 			UUID:              uuid.New().String(),
 			OWNER_ID:          user.ID,
-			FFPROBE_TIMEOUT:   5 * time.Second,
 			ISLIVESTREAM:      false,
 			FFURL:             ffUrl,
 			ON_PROGRESS:       on_progress,

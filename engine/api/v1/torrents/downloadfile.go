@@ -48,8 +48,8 @@ func TorrentFileDownload(ctx *gin.Context, db *gorm.DB) {
 		ctx.JSON(401, gin.H{"error": "not logged in"})
 		return
 	}
-	torrent_id := ctx.Param("torrent_id")
-	index := ctx.Param("index")
+	torrent_id := ctx.Query("id")
+	index := ctx.Query("index")
 	file, err := TorrentFileDownloadController(&user, torrent_id, index, db)
 	if err != nil {
 		ctx.JSON(400, gin.H{"error": err.Error()})

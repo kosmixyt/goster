@@ -111,7 +111,14 @@ func WebServer(db *gorm.DB, port string) *gin.Engine {
 	// r.GET("/api/admin/transcoder/delete", func(ctx *gin.Context) { admin.DeleteTranscoder(ctx, db) })
 
 	r.GET("/api/admin/storages", func(ctx *gin.Context) { admin.GetStorages(ctx, db) })
+
+	r.POST("/api/admin/transcoder/delete", func(ctx *gin.Context) { admin.KillTranscoder(ctx, db) })
 	r.GET("/api/admin/transcoders", func(ctx *gin.Context) { admin.GetTranscoders(ctx, db) })
+	r.GET("/api/admin/transcoders/settings", func(ctx *gin.Context) { admin.GetTranscoderSettings(ctx, db) })
+	r.POST("/api/admin/transcoders/settings", func(ctx *gin.Context) { admin.SetTranscoderSettings(ctx, db) })
+
+	r.GET("/api/admin/torrents", func(ctx *gin.Context) { admin.TorrentPage(ctx, db) })
+
 	r.POST("/api/admin/quality/delete", func(ctx *gin.Context) { admin.DeleteQuality(ctx, db) })
 	r.POST("/api/admin/quality/add", func(ctx *gin.Context) { admin.PostQuality(ctx, db) })
 	r.GET("/api/admin/qualitys", func(ctx *gin.Context) { admin.GetQualitys(ctx, db) })

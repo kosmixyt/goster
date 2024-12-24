@@ -125,9 +125,9 @@ func (f *FILE) MoveStorage(target_store *MemoryStorage) error {
 	}
 	return nil
 }
-func (f *FILE) GetReader() io.ReadSeekCloser {
+func (f *FILE) GetReader() (io.ReadSeekCloser, error) {
 	if f.TORRENT_ID != 0 {
-		return f.GetFileInTorrent().NewReader()
+		return f.GetFileInTorrent().NewReader(), nil
 	}
 	store, err := f.LoadStorage()
 	if err != nil {
@@ -135,9 +135,9 @@ func (f *FILE) GetReader() io.ReadSeekCloser {
 	}
 	file, err := store.toConn().GetReader(f.GetPath(true))
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	return file
+	return file, nil
 }
 func (f *FILE) Ffurl(app *gin.Engine) string {
 	storer, err := f.LoadStorage()
@@ -200,9 +200,6 @@ func (f *FILE) GetTitle() string {
 	return kosmixutil.GetTitle(string(b_))
 }
 
-func (f *FILE) GetNonSeekableReader() io.ReadCloser {
-	return f.GetReader()
-}
 func (f *FILE) IsTorrentFile() bool {
 	return f.TORRENT_ID != 0
 }

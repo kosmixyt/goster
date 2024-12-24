@@ -137,6 +137,9 @@ func GetProviderLineRender(db *gorm.DB, channel chan []Line_Render, wg *sync.Wai
 	}
 	var render = make([]SKINNY_RENDER, 0)
 	for _, r := range results.Results {
+		if r.Poster_path == "" {
+			continue
+		}
 		sk := TmdbSkinnyRender(&r, nil, nil)
 		render = append(render, sk)
 	}
@@ -158,6 +161,9 @@ func GetRecomFromGenreOnProvider(db *gorm.DB, channel chan []Line_Render, wg *sy
 	}
 	var render = make([]SKINNY_RENDER, 0)
 	for _, r := range results.Results {
+		if r.Poster_path == "" {
+			continue
+		}
 		sk := TmdbSkinnyRender(&r, nil, nil)
 		render = append(render, sk)
 	}

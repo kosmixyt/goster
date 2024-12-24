@@ -26,7 +26,7 @@ func GetQualitysController(user *engine.User, db *gorm.DB) (*[]engine.QUALITY, e
 	if !user.ADMIN {
 		return nil, errors.New("unauthorized")
 	}
-	return &engine.QUALITYS, nil
+	return &engine.Config.Transcoder.Qualitys, nil
 }
 
 func PostQuality(c *gin.Context, db *gorm.DB) {
@@ -55,12 +55,14 @@ func PostQualityController(user *engine.User, quality *engine.QUALITY) error {
 	if quality.Width <= 0 || quality.Resolution <= 0 {
 		return errors.New("invalid quality")
 	}
-	for _, q := range engine.QUALITYS {
+	for _, q := range engine.Config.Transcoder.Qualitys {
 		if q.Resolution == quality.Resolution {
 			return errors.New("quality already exists")
 		}
 	}
-	engine.QUALITYS = append(engine.QUALITYS, *quality)
+	engine.Config.Transcoder.Qualitys = append(engine.Config.Transcoder.Qualitys, *quality)
+	engine.NewConfig.Transcoder.Qualitys = append(engine.NewConfig.Transcoder.Qualitys, *quality)
+	engine.ReWriteConfig()
 	return nil
 }
 func DeleteQuality(c *gin.Context, db *gorm.DB) {
@@ -86,17 +88,19 @@ func DeleteQualityController(user *engine.User, Resolution int) error {
 	if !user.ADMIN {
 		return errors.New("unauthorized")
 	}
-	for i, q := range engine.QUALITYS {
+	for i, q := range engine.Config.Transcoder.Qualitys {
 		if q.Resolution == Resolution {
-			engine.QUALITYS = append(engine.QUALITYS[:i], engine.QUALITYS[i+1:]...)
+			engine.Config.Transcoder.Qualitys = append(engine.Config.Transcoder.Qualitys[:i], engine.Config.Transcoder.Qualitys[i+1:]...)
+			engine.NewConfig.Transcoder.Qualitys = append(engine.NewConfig.Transcoder.Qualitys[:i], engine.NewConfig.Transcoder.Qualitys[i+1:]...)
 			return nil
 		}
 	}
+	engine.ReWriteConfig()
 	return errors.New("quality not found")
 }
 
 type TranscoderInfo struct {
-	ID      uint                 `json:"id"`
+	ID      string               `json:"id"`
 	QUALITY string               `json:"quality"`
 	SKINNY  engine.SKINNY_RENDER `json:"skinny"`
 	Ip      string               `json:"ip"`
@@ -123,8 +127,13 @@ func GetTranscodersController(user *engine.User, db *gorm.DB) (*[]TranscoderInfo
 	var transcoders []TranscoderInfo = make([]TranscoderInfo, 0)
 	for _, t := range engine.Transcoders {
 		var transcoder TranscoderInfo
-		transcoder.ID = t.OWNER_ID
-		transcoder.QUALITY = t.CURRENT_QUALITY.Name
+		transcoder.ID = t.UUID
+		// transcoder.QUALITY = t.CURRENT_QUALITY.Name
+		if t.CURRENT_QUALITY != nil {
+			transcoder.QUALITY = t.CURRENT_QUALITY.Name
+		} else {
+			transcoder.QUALITY = "none"
+		}
 		file, ok := t.Source.(*engine.FILE)
 		if ok {
 			transcoder.SKINNY = file.SkinnyRender(user)
@@ -169,4 +178,59 @@ func KillTranscoderController(user *engine.User, uuid string) error {
 		}
 	}
 	return errors.New("transcoder not found")
+}
+
+func SetTranscoderSettingsController(user *engine.User, db *gorm.DB, settings *engine.TranscoderEditableSettings) error {
+	if !user.ADMIN {
+		return errors.New("unauthorized")
+	}
+	return settings.VerifyAndSet()
+}
+func SetTranscoderSettings(ctx *gin.Context, db *gorm.DB) {
+	user, err := engine.GetUser(db, ctx, []string{})
+	if err != nil {
+		ctx.JSON(401, gin.H{"error": "not logged in"})
+		return
+	}
+	var settings engine.TranscoderEditableSettings
+	if err := ctx.BindJSON(&settings); err != nil {
+		ctx.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	err = SetTranscoderSettingsController(&user, db, &settings)
+	if err != nil {
+		ctx.JSON(401, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(200, gin.H{"message": "settings updated"})
+}
+
+func GetTranscoderSettingsController(user *engine.User, db *gorm.DB) (*engine.TranscoderEditableSettings, error) {
+	if !user.ADMIN {
+		return nil, errors.New("unauthorized")
+	}
+	return &engine.TranscoderEditableSettings{
+		EnableForWebPlayableFiles: engine.Config.Transcoder.EnableForWebPlayableFiles,
+		MaxTranscoderThreads:      engine.Config.Transcoder.MaxTranscoderThreads,
+		MaxConverterThreads:       engine.Config.Transcoder.MaxConverterThreads,
+		FFMPEG:                    engine.Config.Transcoder.FFMPEG,
+		FFPROBE:                   engine.Config.Transcoder.FFPROBE,
+		FFPROBE_TIMEOUT:           engine.Config.Transcoder.FFPROBE_TIMEOUT,
+		SEGMENT_TIME:              engine.Config.Transcoder.SEGMENT_TIME,
+		REQUEST_TIMEOUT:           engine.Config.Transcoder.REQUEST_TIMEOUT,
+	}, nil
+}
+
+func GetTranscoderSettings(ctx *gin.Context, db *gorm.DB) {
+	user, err := engine.GetUser(db, ctx, []string{})
+	if err != nil {
+		ctx.JSON(401, gin.H{"error": "not logged in"})
+		return
+	}
+	settings, err := GetTranscoderSettingsController(&user, db)
+	if err != nil {
+		ctx.JSON(401, gin.H{"error": err.Error()})
+		return
+	}
+	ctx.JSON(200, settings)
 }

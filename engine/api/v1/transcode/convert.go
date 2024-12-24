@@ -133,7 +133,7 @@ func ConvertOptions(db *gorm.DB, ctx *gin.Context, app *gin.Engine) {
 		return
 	}
 	ctx.JSON(200, gin.H{
-		"Qualities":   engine.QUALITYS,
+		"Qualities":   engine.Config.Transcoder.Qualitys,
 		"AudioTracks": Tracks,
 		"Paths":       availablePaths,
 	})

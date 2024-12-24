@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"gorm.io/gorm"
@@ -108,7 +109,14 @@ func InitStoragesConnection(locations []StorageElement) error {
 	db.Where("id NOT IN ?", toNotDeletePath).Delete(&StoragePathElement{})
 	return nil
 }
-func Scan(db *gorm.DB) {
+
+var scan_mtx = sync.Mutex{}
+
+func Scan(db *gorm.DB) error {
+	if !scan_mtx.TryLock() {
+		return fmt.Errorf("Scan already running")
+	}
+	defer scan_mtx.Unlock()
 	var files_ar []*storage.FileData
 	for _, storage := range Storages {
 		storage.DbElement.LoadPaths()
@@ -230,6 +238,7 @@ func Scan(db *gorm.DB) {
 	queryTime := time.Now()
 	fmt.Println("Query time: Insert", time.Since(queryTime))
 	DeleteFilesInDb(tonotDelete, db)
+	return nil
 }
 
 func DeleteFilesInDb(ids []uint, db *gorm.DB) {

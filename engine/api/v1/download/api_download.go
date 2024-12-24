@@ -29,14 +29,12 @@ func DownloadItem(ctx *gin.Context, db *gorm.DB) {
 	task.AddLog("Download time: ", time.Since(reqTime).String())
 	ctx.Header("Content-Disposition", "attachment; filename="+kosmixutil.FormatFilenameForContentDisposition(renderFile.FILENAME))
 	ctx.Header("X-File-ID", strconv.Itoa(int(renderFile.ID)))
-	if reader := renderFile.GetReader(); reader != nil {
-		fmt.Println("Seekable reader", reader)
-		kosmixutil.ServerRangeRequest(ctx, renderFile.SIZE, reader, true, true)
+	reader, err := renderFile.GetReader()
+	if err != nil {
+		ctx.JSON(400, gin.H{"error": err.Error()})
+		return
 	} else {
-		if Nreader := renderFile.GetNonSeekableReader(); Nreader != nil {
-			fmt.Println("Non seekable reader")
-			kosmixutil.ServerNonSeekable(ctx, Nreader)
-		}
+		kosmixutil.ServerRangeRequest(ctx, renderFile.SIZE, reader, true, true)
 	}
 	task.AddLog("Byte Transferred ", strconv.FormatInt(int64(ctx.Writer.Size()), 10))
 	task.AddLog("Total download time: ", time.Since(reqTime).String())

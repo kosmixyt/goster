@@ -1,32 +1,7 @@
 package diffusion
 
-import (
-	"encoding/json"
-	"fmt"
-	"log"
-	"os"
-	"os/signal"
-
-	"github.com/gin-gonic/gin"
-	"github.com/gorilla/websocket"
-	"gorm.io/gorm"
-	"kosmix.fr/streaming/engine/api/v1/browse"
-	"kosmix.fr/streaming/engine/api/v1/image"
-	"kosmix.fr/streaming/engine/api/v1/iptv"
-	"kosmix.fr/streaming/engine/api/v1/landing"
-	"kosmix.fr/streaming/engine/api/v1/me"
-	"kosmix.fr/streaming/engine/api/v1/render"
-	"kosmix.fr/streaming/engine/api/v1/search"
-	"kosmix.fr/streaming/engine/api/v1/share"
-	"kosmix.fr/streaming/engine/api/v1/task"
-	"kosmix.fr/streaming/engine/api/v1/torrents"
-	"kosmix.fr/streaming/engine/api/v1/transcode"
-	"kosmix.fr/streaming/engine/api/v1/watchlist"
-	"kosmix.fr/streaming/kosmixutil"
-)
-
-func SetupWebsocketClient(db *gorm.DB, app *gin.Engine) {
-	serverURL := "ws://localhost:4040"
+// func SetupWebsocketClient(db *gorm.DB, app *gin.Engine) {
+// serverURL := "ws://localhost:4040"
 
 // 	// Dial the WebSocket server
 // tk:

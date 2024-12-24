@@ -112,7 +112,6 @@ func TranscodeIptvController(db *gorm.DB, user *engine.User, channelIdStr string
 		FFURL:             dataStream,
 		Task:              task,
 		ON_PROGRESS:       func(i1, i2 int64) {},
-		FFPROBE_TIMEOUT:   time.Second * 30,
 		SEGMENTS:          make(map[string]chan func() io.Reader),
 		Last_request_time: &ct,
 		TRACKS:            make([]engine.AUDIO_TRACK, 0),

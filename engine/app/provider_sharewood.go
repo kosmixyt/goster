@@ -17,9 +17,14 @@ import (
 )
 
 type Sharewood struct {
-	Client *http.Client
-	Token  string
+	Client      *http.Client
+	Token       string
+	credentials map[string]string
 }
+
+var s_last_response_time time.Duration = time.Duration(0) * time.Millisecond
+var s_total_fetched int64 = 0
+var base_url = "https://www.sharewood.tv"
 
 type ShareWoodItem struct {
 	Id              int64  `json:"id"`
@@ -40,28 +45,53 @@ type ShareWoodItem struct {
 }
 
 var SHAREWOOD Sharewood = Sharewood{
-	Client: &http.Client{},
-	Token:  "",
+	Client:      &http.Client{},
+	Token:       "",
+	credentials: map[string]string{},
+}
+
+func (s *Sharewood) Name() string {
+	return "sharewood"
+}
+func (s *Sharewood) TotalFetched() int64 {
+	return s_total_fetched
+}
+func (s *Sharewood) LastResponseTime() time.Duration {
+	return s_last_response_time
 }
 
 func (s *Sharewood) FetchNewItems() byIndexCategory {
 	return make(byIndexCategory)
 }
 func (s *Sharewood) Enabled() bool {
-	return Config.TorrentProviders.Sharewood.Username != ""
+	return s.credentials["username"] != "" && s.credentials["password"] != "" && s.Token != ""
+}
+func (s *Sharewood) Test() error {
+	items := make(chan []*Torrent_File)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go s.Search("movies", "interstellar", items, &wg)
+	wg.Wait()
+	if len(<-items) == 0 {
+		return errors.New("No items found")
+	}
+	return nil
 }
 
-func (s *Sharewood) Init() error {
+func (s *Sharewood) TryEnable(credentials map[string]string) error {
 	cookie, err := cookiejar.New(nil)
 	if err != nil {
 		panic(err)
 	}
 	s.Client.Jar = cookie
-	s.Login()
+	if err := s.Login(credentials); err != nil {
+		return err
+
+	}
 	go func() {
 		for {
 			time.Sleep(1 * time.Hour)
-			s.Login()
+			s.Login(s.credentials)
 		}
 	}()
 	return nil
@@ -72,25 +102,28 @@ func ParseName(name string) string {
 	return name
 }
 
-func (s *Sharewood) Login() {
-	req, err := http.NewRequest("GET", "https://www.sharewood.tv/login", nil)
+func (s *Sharewood) Login(credentials map[string]string) error {
+	if credentials["username"] == "" || credentials["password"] == "" {
+		return errors.New("Missing credentials")
+	}
+	req, err := http.NewRequest("GET", base_url+"/login", nil)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.140 Safari/537.36")
 	res, err := s.Client.Do(req)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	if res.StatusCode != 200 {
-		panic("Error logging in to sharewood")
+		return errors.New("Error getting login page from sharewood, status: " + res.Status)
 	}
 	s.Client.Jar.SetCookies(req.URL, res.Cookies())
 	var strbody string
 	body, _ := io.ReadAll(res.Body)
 	strbody = string(body)
 	if strings.Contains(strbody, "Just a moment...") {
-		panic("Cloudflare detected")
+		return errors.New("Cloudflare detected")
 	}
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(strbody))
 	if err != nil {
@@ -98,35 +131,37 @@ func (s *Sharewood) Login() {
 	}
 	var token = doc.Find(`form > input[name="_token"]`).First().AttrOr("value", "")
 	fmt.Println("Token: ", token)
-	args := "_token=" + token + "&username=" + Config.TorrentProviders.Sharewood.Username + "&password=" + Config.TorrentProviders.Sharewood.Password + "&submit="
+	args := "_token=" + token + "&username=" + credentials["username"] + "&password=" + credentials["password"] + "&submit="
 
-	req, err = http.NewRequest("POST", "https://www.sharewood.tv/login", strings.NewReader(args))
+	req, err = http.NewRequest("POST", base_url+"/login", strings.NewReader(args))
 	if err != nil {
-		panic(err)
+		return err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.140 Safari/537.36")
 	res, err = s.Client.Do(req)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	_, err = io.ReadAll(res.Body)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	if res.StatusCode != 200 {
 		fmt.Println("Error logging in to sharewood: ", res.Status)
 		// fmt.Println(string(body))
-		panic("Error logging in to sharewood")
+		return errors.New("Error logging in to sharewood")
 	}
 	fmt.Println("Logged in to sharewood")
 	s.Token = token
 	s.Client.Jar.SetCookies(req.URL, res.Cookies())
+	return nil
 }
 func (s *Sharewood) Search(Type string, query string, channel chan []*Torrent_File, wg *sync.WaitGroup) {
+	start := time.Now()
 	defer wg.Done()
 	encoded := url.QueryEscape(ParseName(query))
-	url := "https://www.sharewood.tv/filterTorrents?_token=" + s.Token + "&search=" + encoded + "&description=&uploader=&tags=&sorting=created_at&direction=desc&qty=25&categories%5B%5D=1"
+	url := base_url + "/filterTorrents?_token=" + s.Token + "&search=" + encoded + "&description=&uploader=&tags=&sorting=created_at&direction=desc&qty=25&categories%5B%5D=1"
 	req, err := http.NewRequest("GET", url, nil)
 	fmt.Println("Searching ", url)
 	if err != nil {
@@ -158,14 +193,16 @@ func (s *Sharewood) Search(Type string, query string, channel chan []*Torrent_Fi
 		if err != nil {
 			panic(err)
 		}
-		item.FetchData = "https://www.sharewood.tv/download/" + Slug + "." + Id
-		item.PROVIDER = "sharewood"
+		item.FetchData = base_url + "/download/" + Slug + "." + Id
+		item.PROVIDER = s.Name()
 		item.LastFetch = time.Now()
 		items = append(items, &item)
 	})
+	s_last_response_time = time.Since(start)
 	channel <- items
 }
 func (s *Sharewood) FetchTorrentFile(item *Torrent_File) (io.Reader, error) {
+	s_total_fetched++
 	req, err := http.NewRequest("GET", item.FetchData, nil)
 	if err != nil {
 		panic(err)

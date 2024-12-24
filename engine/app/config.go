@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -60,48 +59,48 @@ func PanicOnError(err error) {
 	}
 }
 
-var QUALITYS = []QUALITY{
-	{
-		Name:              "1080p-extra",
-		Resolution:        1080,
-		Width:             1920,
-		VideoBitrate:      4000,
-		AudioBitrate:      320,
-		BitrateMultiplier: 1,
-	},
-	{
-		Name:              "1080p",
-		Resolution:        1080,
-		Width:             1920,
-		VideoBitrate:      3500,
-		AudioBitrate:      200,
-		BitrateMultiplier: 0.9,
-	},
-	{
-		Name:              "720p",
-		Resolution:        720,
-		Width:             1280,
-		VideoBitrate:      3000,
-		AudioBitrate:      128,
-		BitrateMultiplier: 0.8,
-	},
-	{
-		Name:              "480p",
-		Resolution:        480,
-		Width:             854,
-		VideoBitrate:      2500,
-		AudioBitrate:      128,
-		BitrateMultiplier: 0.7,
-	},
-	{
-		Name:              "360p",
-		Resolution:        360,
-		Width:             640,
-		VideoBitrate:      1000,
-		AudioBitrate:      128,
-		BitrateMultiplier: 0.6,
-	},
-}
+// var QUALITYS = []QUALITY{
+// 	{
+// 		Name:              "1080p-extra",
+// 		Resolution:        1080,
+// 		Width:             1920,
+// 		VideoBitrate:      4000,
+// 		AudioBitrate:      320,
+// 		BitrateMultiplier: 1,
+// 	},
+// 	{
+// 		Name:              "1080p",
+// 		Resolution:        1080,
+// 		Width:             1920,
+// 		VideoBitrate:      3500,
+// 		AudioBitrate:      200,
+// 		BitrateMultiplier: 0.9,
+// 	},
+// 	{
+// 		Name:              "720p",
+// 		Resolution:        720,
+// 		Width:             1280,
+// 		VideoBitrate:      3000,
+// 		AudioBitrate:      128,
+// 		BitrateMultiplier: 0.8,
+// 	},
+// 	{
+// 		Name:              "480p",
+// 		Resolution:        480,
+// 		Width:             854,
+// 		VideoBitrate:      2500,
+// 		AudioBitrate:      128,
+// 		BitrateMultiplier: 0.7,
+// 	},
+// 	{
+// 		Name:              "360p",
+// 		Resolution:        360,
+// 		Width:             640,
+// 		VideoBitrate:      1000,
+// 		AudioBitrate:      128,
+// 		BitrateMultiplier: 0.6,
+// 	},
+// }
 
 type StorageElement struct {
 	TYPE    string                   `json:"type"`
@@ -109,6 +108,11 @@ type StorageElement struct {
 	Paths   []kosmixutil.PathElement `json:"paths"`
 	Name    string                   `json:"name"`
 }
+
+// const FFPROBE_TIMEOUT = 10 * time.Second
+// const SEGMENT_TIME = 2.0
+
+const AVANCE = 1
 
 type AppConfig struct {
 	Locations []StorageElement `json:"scan_paths"`
@@ -130,11 +134,15 @@ type AppConfig struct {
 		CheckInterval int   `json:"check_interval"`
 	} `json:"limits"`
 	Transcoder struct {
-		EnableForWebPlayableFiles bool   `json:"enable_for_web_playable_files"`
-		MaxTranscoderThreads      int    `json:"max_transcoder_threads"`
-		MaxConverterThreads       int    `json:"max_converter_threads"`
-		FFMPEG                    string `json:"ffmpeg"`
-		FFPROBE                   string `json:"ffprobe"`
+		EnableForWebPlayableFiles bool      `json:"enable_for_web_playable_files"`
+		MaxTranscoderThreads      int       `json:"max_transcoder_threads"`
+		MaxConverterThreads       int       `json:"max_converter_threads"`
+		FFMPEG                    string    `json:"ffmpeg"`
+		FFPROBE                   string    `json:"ffprobe"`
+		FFPROBE_TIMEOUT           uint      `json:"ffprobe_timeout"`
+		SEGMENT_TIME              float64   `json:"segment_time"`
+		REQUEST_TIMEOUT           uint      `json:"request_timeout"`
+		Qualitys                  []QUALITY `json:"qualitys"`
 	} `json:"transcoder"`
 	Torrents struct {
 		DownloadPath string `json:"download_path"`
@@ -160,18 +168,23 @@ type AppConfig struct {
 		CapsolverrProxyUrl string `json:"capsolverr_proxy_url"`
 		CapsolverrApiKey   string `json:"capsolverr_api_key"`
 	} `json:"cloudflare"`
-	TorrentProviders struct {
-		Sharewood struct {
-			Key      string `json:"key"`
-			Username string `json:"username"`
-			Password string `json:"password"`
-		} `json:"sharewood"`
-		YGG struct {
-			Username string `json:"username"`
-			Password string `json:"password"`
-		} `json:"ygg"`
-	} `json:"torrent_providers"`
+	TorrentProviders map[string]map[string]string `json:"torrent_providers"`
 }
+
+// TorrentProviders struct {
+// 	Sharewood map[string]string `json:"sharewood"`
+// 	YGG       map[string]string `json:"ygg"`
+// } `json:"torrent_providers"`
+// TorrentProviders struct {
+// 	Sharewood struct {
+// 		Key      string `json:"key"`
+// 		Username string `json:"username"`
+// 		Password string `json:"password"`
+// 	} `json:"sharewood"`
+// 	YGG struct {
+// 		Username string `json:"username"`
+// 		Password string `json:"password"`
+// 	} `json:"ygg"`
 
 func LoadConfig() {
 	f, err := os.Open("config.json")
@@ -185,6 +198,31 @@ func LoadConfig() {
 	NewConfig = Config
 	kosmixutil.InitKeys(Config.Metadata.Tmdb, Config.Metadata.Omdb, Config.Metadata.TmdbImgLang, Config.Metadata.TmdbLang)
 	SetupCachePaths(Config.CachePath)
+}
+
+type TranscoderEditableSettings struct {
+	EnableForWebPlayableFiles bool    `json:"enable_for_web_playable_files"`
+	MaxTranscoderThreads      int     `json:"max_transcoder_threads"`
+	MaxConverterThreads       int     `json:"max_converter_threads"`
+	FFMPEG                    string  `json:"ffmpeg"`
+	FFPROBE                   string  `json:"ffprobe"`
+	FFPROBE_TIMEOUT           uint    `json:"ffprobe_timeout"`
+	SEGMENT_TIME              float64 `json:"segment_time"`
+	REQUEST_TIMEOUT           uint    `json:"request_timeout"`
+}
+
+func (f *TranscoderEditableSettings) VerifyAndSet() error {
+	Config.Transcoder.EnableForWebPlayableFiles = f.EnableForWebPlayableFiles
+	Config.Transcoder.MaxTranscoderThreads = f.MaxTranscoderThreads
+	Config.Transcoder.MaxConverterThreads = f.MaxConverterThreads
+	Config.Transcoder.FFMPEG = f.FFMPEG
+	Config.Transcoder.FFPROBE = f.FFPROBE
+	Config.Transcoder.FFPROBE_TIMEOUT = (f.FFPROBE_TIMEOUT)
+	Config.Transcoder.SEGMENT_TIME = f.SEGMENT_TIME
+	Config.Transcoder.REQUEST_TIMEOUT = (f.REQUEST_TIMEOUT)
+	NewConfig.Transcoder = Config.Transcoder
+	ReWriteConfig()
+	return nil
 }
 func DeleteStorage(name string) error {
 	for i, storage := range NewConfig.Locations {
@@ -223,15 +261,6 @@ func DeletePath(name string, DeletePath kosmixutil.PathElement) error {
 	}
 	return fmt.Errorf("storage not found")
 }
-
-const FFPROBE_TIMEOUT = 10 * time.Second
-const SEGMENT_TIME = 2.0
-const AVANCE = 1
-const THREAD_NUMBER = "4"
-
-// les interval minimales entre les 2 requete
-const LAST_REQUEST_TIMEOUT = 100
-const REQUEST_TIMEOUT = SEGMENT_TIME * 8 * 1000 * time.Millisecond
 
 func ReWriteConfig() {
 	f, err := os.OpenFile("config.json", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
@@ -350,7 +379,7 @@ func GetUserWs(db *gorm.DB, user_id string, preload []string) (User, error) {
 
 // get quality by index
 func GetQuality(i int) *QUALITY {
-	for _, q := range QUALITYS {
+	for _, q := range Config.Transcoder.Qualitys {
 		if q.Resolution == i {
 			return &q
 		}
@@ -359,7 +388,7 @@ func GetQuality(i int) *QUALITY {
 }
 
 func GetQualityByResolution(res int) *QUALITY {
-	for _, q := range QUALITYS {
+	for _, q := range Config.Transcoder.Qualitys {
 		if q.Resolution == res {
 			return &q
 		}

@@ -19,7 +19,12 @@ func GetShare(ctx *gin.Context, db *gorm.DB) {
 		return
 	}
 	f := share.GetFile()
-	kosmixutil.ServerRangeRequest(ctx, f.SIZE, f.GetReader(), true, true)
+	reader, err := f.GetReader()
+	if err != nil {
+		ctx.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
+	kosmixutil.ServerRangeRequest(ctx, f.SIZE, reader, true, true)
 }
 
 func GetShareController(db *gorm.DB, id string) (*engine.Share, error) {
