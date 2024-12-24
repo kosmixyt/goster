@@ -79,7 +79,7 @@ func AssignFileToMedia(ctx *gin.Context, db *gorm.DB) {
 		ctx.JSON(401, gin.H{"error": "not logged in"})
 		return
 	}
-	err = AssignFileToMediaController(&user, db, ctx.PostForm("file_id"), ctx.PostForm("type"), ctx.PostForm("id"), ctx.PostForm("season_id"), ctx.PostForm("episode_id"))
+	err = AssignFileToMediaController(&user, db, ctx.PostForm("fileid"), ctx.PostForm("type"), ctx.PostForm("id"), ctx.PostForm("season_id"), ctx.PostForm("episode_id"))
 	if err != nil {
 		ctx.JSON(500, gin.H{"error": err.Error()})
 	}

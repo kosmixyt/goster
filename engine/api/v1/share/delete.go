@@ -37,7 +37,7 @@ func DeleteShareController(db *gorm.DB, id string, user engine.User) error {
 	return nil
 }
 
-func DeleteShareWs(db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+func DeleteShareWs(db *gorm.DB, request *kosmixutil.WebsocketMessage, conn *websocket.Conn) {
 	user, err := engine.GetUserWs(db, request.UserToken, []string{"SHARES"})
 	if err != nil {
 		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("not logged in"), request.RequestUuid)

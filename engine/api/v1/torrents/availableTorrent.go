@@ -87,7 +87,7 @@ func AvailableTorrents(ctx *gin.Context, db *gorm.DB) {
 		ctx.JSON(200, data)
 	}
 }
-func AvailableTorrentsWs(db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+func AvailableTorrentsWs(db *gorm.DB, request *kosmixutil.WebsocketMessage, conn *websocket.Conn) {
 	user, err := engine.GetUserWs(db, request.UserToken, []string{})
 	if err != nil {
 		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("not logged in"), request.RequestUuid)

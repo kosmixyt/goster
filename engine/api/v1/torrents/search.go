@@ -102,7 +102,7 @@ func SearchTorrents(ctx *gin.Context, db *gorm.DB) {
 	}
 	ctx.JSON(200, d)
 }
-func SearchTorrentsWs(db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+func SearchTorrentsWs(db *gorm.DB, request *kosmixutil.WebsocketMessage, conn *websocket.Conn) {
 	user, err := engine.GetUserWs(db, request.UserToken, []string{})
 	if err != nil {
 		kosmixutil.SendWebsocketResponse(conn, nil, err, request.RequestUuid)

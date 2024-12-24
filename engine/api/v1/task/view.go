@@ -31,7 +31,7 @@ func GetTask(db *gorm.DB, ctx *gin.Context) {
 	<-ctx.Writer.CloseNotify()
 
 }
-func GetTaskWs(db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+func GetTaskWs(db *gorm.DB, request *kosmixutil.WebsocketMessage, conn *websocket.Conn) {
 	user, err := engine.GetUserWs(db, request.UserToken, []string{"Tasks"})
 	if err != nil {
 		kosmixutil.SendWebsocketResponse(conn, nil, errors.New("not logged in"), request.RequestUuid)

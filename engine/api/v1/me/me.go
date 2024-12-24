@@ -183,7 +183,7 @@ func HandleMe(ctx *gin.Context, db *gorm.DB) {
 		ctx.JSON(200, me)
 	}
 }
-func HandleMeWs(db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
+func HandleMeWs(db *gorm.DB, request *kosmixutil.WebsocketMessage, conn *websocket.Conn) {
 	user, err := engine.GetUserWs(db, request.UserToken, []string{"SHARES", "SHARES.FILE", "Requests", "Requests.TV", "Requests.TV_SEASON", "Requests.Movie", "Requests.TORRENT"})
 	if err != nil {
 		kosmixutil.SendWebsocketResponse(conn, nil, err, request.RequestUuid)
