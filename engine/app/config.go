@@ -2,6 +2,7 @@ package engine
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -32,6 +33,7 @@ var TRAILER_OUTPUT_PATH string
 var FFMPEG_BIG_FILE_PATH string
 
 var Config = AppConfig{}
+var NewConfig = AppConfig{}
 
 func SetupCachePaths(cache_path string) {
 	abs, err := filepath.Abs(cache_path)
@@ -60,46 +62,52 @@ func PanicOnError(err error) {
 
 var QUALITYS = []QUALITY{
 	{
-		Name:         "1080p-extra",
-		Resolution:   1080,
-		Width:        1920,
-		VideoBitrate: 4000,
-		AudioBitrate: 320,
+		Name:              "1080p-extra",
+		Resolution:        1080,
+		Width:             1920,
+		VideoBitrate:      4000,
+		AudioBitrate:      320,
+		BitrateMultiplier: 1,
 	},
 	{
-		Name:         "1080p",
-		Resolution:   1080,
-		Width:        1920,
-		VideoBitrate: 3500,
-		AudioBitrate: 200,
+		Name:              "1080p",
+		Resolution:        1080,
+		Width:             1920,
+		VideoBitrate:      3500,
+		AudioBitrate:      200,
+		BitrateMultiplier: 0.9,
 	},
 	{
-		Name:         "720p",
-		Resolution:   720,
-		Width:        1280,
-		VideoBitrate: 3000,
-		AudioBitrate: 128,
+		Name:              "720p",
+		Resolution:        720,
+		Width:             1280,
+		VideoBitrate:      3000,
+		AudioBitrate:      128,
+		BitrateMultiplier: 0.8,
 	},
 	{
-		Name:         "480p",
-		Resolution:   480,
-		Width:        854,
-		VideoBitrate: 2500,
-		AudioBitrate: 128,
+		Name:              "480p",
+		Resolution:        480,
+		Width:             854,
+		VideoBitrate:      2500,
+		AudioBitrate:      128,
+		BitrateMultiplier: 0.7,
 	},
 	{
-		Name:         "360p",
-		Resolution:   360,
-		Width:        640,
-		VideoBitrate: 1000,
-		AudioBitrate: 128,
+		Name:              "360p",
+		Resolution:        360,
+		Width:             640,
+		VideoBitrate:      1000,
+		AudioBitrate:      128,
+		BitrateMultiplier: 0.6,
 	},
 }
 
 type StorageElement struct {
-	TYPE    string      `json:"type"`
-	Options interface{} `json:"options"`
-	Name    string      `json:"name"`
+	TYPE    string                   `json:"type"`
+	Options interface{}              `json:"options"`
+	Paths   []kosmixutil.PathElement `json:"paths"`
+	Name    string                   `json:"name"`
 }
 
 type AppConfig struct {
@@ -174,8 +182,46 @@ func LoadConfig() {
 	if err := json.NewDecoder(f).Decode(&Config); err != nil {
 		panic(err)
 	}
+	NewConfig = Config
 	kosmixutil.InitKeys(Config.Metadata.Tmdb, Config.Metadata.Omdb, Config.Metadata.TmdbImgLang, Config.Metadata.TmdbLang)
 	SetupCachePaths(Config.CachePath)
+}
+func DeleteStorage(name string) error {
+	for i, storage := range NewConfig.Locations {
+		if storage.Name == name {
+			NewConfig.Locations = append(NewConfig.Locations[:i], NewConfig.Locations[i+1:]...)
+			return nil
+		}
+	}
+	return fmt.Errorf("storage not found (may be already deleted)")
+}
+func AddPath(name string, AddPath kosmixutil.PathElement) error {
+	for _, storage := range NewConfig.Locations {
+		if storage.Name == name {
+			for _, path := range storage.Paths {
+				if AddPath.Path == path.Path {
+					return fmt.Errorf("path already exists")
+				}
+			}
+			storage.Paths = append(storage.Paths, AddPath)
+			return nil
+		}
+	}
+	return errors.New("storage not found")
+}
+func DeletePath(name string, DeletePath kosmixutil.PathElement) error {
+	for _, storage := range NewConfig.Locations {
+		if storage.Name == name {
+			for i, path := range storage.Paths {
+				if DeletePath.Path == path.Path {
+					storage.Paths = append(storage.Paths[:i], storage.Paths[i+1:]...)
+					return nil
+				}
+			}
+			return fmt.Errorf("path not found")
+		}
+	}
+	return fmt.Errorf("storage not found")
 }
 
 const FFPROBE_TIMEOUT = 10 * time.Second
@@ -186,6 +232,17 @@ const THREAD_NUMBER = "4"
 // les interval minimales entre les 2 requete
 const LAST_REQUEST_TIMEOUT = 100
 const REQUEST_TIMEOUT = SEGMENT_TIME * 8 * 1000 * time.Millisecond
+
+func ReWriteConfig() {
+	f, err := os.OpenFile("config.json", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		panic(err)
+	}
+	defer f.Close()
+	if err := json.NewEncoder(f).Encode(NewConfig); err != nil {
+		panic(err)
+	}
+}
 
 func GetMaxSize(of string) int64 {
 	if of == Movie {

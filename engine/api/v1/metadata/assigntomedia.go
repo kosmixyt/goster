@@ -83,6 +83,7 @@ func AssignFileToMedia(ctx *gin.Context, db *gorm.DB) {
 	if err != nil {
 		ctx.JSON(500, gin.H{"error": err.Error()})
 	}
+	ctx.JSON(200, gin.H{"message": "ok"})
 }
 func AssignFileToMediaWs(db *gorm.DB, request kosmixutil.WebsocketMessage, conn *websocket.Conn) {
 	user, err := engine.GetUserWs(db, request.UserToken, []string{})

@@ -22,7 +22,7 @@ func GetDbConn() *gorm.DB {
 	case "sqlite":
 		connector = sqlite.Open(Config.DB.Database)
 	case "mysql":
-		url := Config.DB.Username + ":" + Config.DB.Password + "@tcp(" + Config.DB.Host + ":" + Config.DB.Port + ")/" + Config.DB.Database + "?charset=utf8mb4&parseTime=True&loc=Local"
+		url := Config.DB.Username + ":" + Config.DB.Password + "@tcp(" + Config.DB.Host + ":" + Config.DB.Port + ")/" + Config.DB.Database + "?parseTime=True&charset=utf8mb4&loc=Local"
 		connector = mysql.Open(url)
 	default:
 		panic("Unknown database driver")
@@ -45,6 +45,7 @@ func Init() *gorm.DB {
 		panic(err)
 	}
 	dbClient.AutoMigrate(
+		&StoragePathElement{},
 		&StorageDbElement{},
 		&MediaQuality{},
 		&MediaQualityProfile{},
@@ -100,7 +101,7 @@ func Init() *gorm.DB {
 	os.MkdirAll(HLS_OUTPUT_PATH, os.ModePerm)
 	fmt.Println("Scanning locations")
 	InitStoragesConnection(Config.Locations)
-	Scan(dbClient)
+	// Scan(dbClient)
 	InitTorrents(dbClient)
 
 	// VerifyDB(dbClient)

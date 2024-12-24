@@ -31,9 +31,7 @@ type Convert struct {
 	Progress         *FfmpegProgress
 	FfprobeBase      *FFPROBE_DATA
 	Running          bool
-	OutputStorer     *MemoryStorage
-	// must be a root path of the storage
-	OutputPathStorer string
+	OutputPathStorer *StoragePathElement
 }
 
 func GetConvertByTaskId(task_id uint) *Convert {
@@ -78,9 +76,6 @@ func (c *Convert) Convert(app *gin.Engine) (*FILE, error) {
 	if c.OUTPUT_FILE != nil || c.SOURCE_FILE == nil || c.User == nil {
 		return nil, errors.New("invalid convert")
 	}
-	if !c.OutputStorer.DbElement.HasRootPath(c.OutputPathStorer) {
-		return nil, c.Task.SetAsError(errors.New("invalid output path")).(error)
-	}
 	if !c.User.CAN_CONVERT {
 		return nil, c.Task.SetAsError(errors.New("user can't convert")).(error)
 	}
@@ -93,7 +88,7 @@ func (c *Convert) Convert(app *gin.Engine) (*FILE, error) {
 	c.Task.SetAsStarted()
 	output_filename := "convert-" + strconv.Itoa(c.Quality.Width) + "-" + ReplaceExtension(c.SOURCE_FILE.FILENAME, ".mp4")
 	c.OUTPUT_FILE_NAME = output_filename
-	c.Task.AddLog("Converting " + c.SOURCE_FILE.FILENAME + " to " + strconv.Itoa(c.Quality.Width) + "p with new path" + c.OutputPathStorer)
+	c.Task.AddLog("Converting " + c.SOURCE_FILE.FILENAME + " to " + strconv.Itoa(c.Quality.Width) + "p with new path" + c.OutputPathStorer.Path)
 	args := []string{
 		"-i",
 		"pipe:0",
@@ -117,7 +112,7 @@ func (c *Convert) Convert(app *gin.Engine) (*FILE, error) {
 		"-b:a",
 		strconv.Itoa(c.Quality.AudioBitrate) + "k",
 	}...)
-	ffmpeg_output, on_finish, err := CreateTempFfmpegOutputFile(c.OutputStorer, c.OutputPathStorer, c.OUTPUT_FILE_NAME)
+	ffmpeg_output, on_finish, err := CreateTempFfmpegOutputFile(c.OutputPathStorer, c.OUTPUT_FILE_NAME)
 	if err != nil {
 		c.Task.SetAsError(err)
 		return nil, err
@@ -184,17 +179,15 @@ func (c *Convert) Convert(app *gin.Engine) (*FILE, error) {
 	(*on_finish)(false, c.Task)
 	Converts = append(Converts, c)
 	output_file := &FILE{
-		MOVIE_ID:   c.SOURCE_FILE.MOVIE_ID,
-		EPISODE_ID: c.SOURCE_FILE.EPISODE_ID,
-		SEASON_ID:  c.SOURCE_FILE.SEASON_ID,
-		TV_ID:      c.SOURCE_FILE.TV_ID,
-		IS_MEDIA:   true,
-		FILENAME:   output_filename,
-		ROOT_PATH:  c.OutputPathStorer,
-		STORAGE:    c.OutputStorer.DbElement,
-		STORAGEID:  &c.OutputStorer.DbElement.ID,
-		SUB_PATH:   "",
-		SIZE:       0,
+		MOVIE_ID:           c.SOURCE_FILE.MOVIE_ID,
+		EPISODE_ID:         c.SOURCE_FILE.EPISODE_ID,
+		SEASON_ID:          c.SOURCE_FILE.SEASON_ID,
+		TV_ID:              c.SOURCE_FILE.TV_ID,
+		IS_MEDIA:           true,
+		FILENAME:           output_filename,
+		StoragePathElement: c.OutputPathStorer,
+		SUB_PATH:           "",
+		SIZE:               0,
 	}
 	stats, err := output_file.stats()
 	if err != nil {

@@ -282,3 +282,9 @@ func GetStringKeys(keys []string, opt interface{}) map[string]string {
 	}
 	return val
 }
+
+type PathElement struct {
+	Path string `json:"path"`
+	// size allowed to use for
+	Size int64 `json:"size"`
+}

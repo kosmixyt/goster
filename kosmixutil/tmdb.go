@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -17,6 +18,151 @@ var OMDB_API_KEY string
 
 const API_URL = "https://api.themoviedb.org/3"
 const TMDB_IMAGE_URL = "https://image.tmdb.org/t/p/original"
+
+var ISO3166 = []string{
+	"AF",
+	"AX",
+	"AL",
+	"DZ",
+	"AS",
+	"AD",
+	"AO",
+	"AI",
+	"AQ",
+	"AG",
+	"AR",
+	"AM",
+	"AW",
+	"AU",
+	"AT",
+	"AZ",
+	"BS",
+	"BH",
+	"BD",
+	"BB",
+	"BY",
+	"BE",
+	"BZ",
+	"BJ",
+	"BM",
+	"BT",
+	"BO",
+	"BQ",
+	"BA",
+	"BW",
+	"BV",
+	"BR",
+	"IO",
+	"BN",
+	"BG",
+	"BF",
+	"BI",
+	"CV",
+	"KH",
+	"CM",
+	"CA",
+	"KY",
+	"CF",
+	"TD",
+	"CL",
+	"CN",
+	"CX",
+	"CC",
+	"CO",
+	"KM",
+	"CG",
+	"CD",
+	"CK",
+	"CR",
+	"CI",
+	"HR",
+	"CU",
+	"CW",
+	"CY",
+	"CZ",
+	"DK",
+	"DJ",
+	"DM",
+	"DO",
+	"EC",
+	"EG",
+	"SV",
+	"GQ",
+	"ER",
+	"EE",
+	"SZ",
+	"ET",
+	"FK",
+	"FO",
+	"FJ",
+	"FI",
+	"FR",
+	"GF",
+	"PF",
+	"TF",
+	"GA",
+	"GM",
+	"GE",
+	"DE",
+	"GH",
+	"GI",
+	"GR",
+	"GL",
+	"GD",
+	"GP",
+	"GU",
+	"GT",
+	"GG",
+	"GN",
+	"GW",
+	"GY",
+	"HT",
+	"HM",
+	"VA",
+	"HN",
+	"HK",
+	"HU",
+	"IS",
+	"IN",
+	"ID",
+	"IR",
+	"IQ",
+	"IE",
+	"IM",
+	"IL",
+	"IT",
+	"JM",
+	"JP",
+	"JE",
+	"JO",
+	"KZ",
+	"KE",
+	"KI",
+	"KP",
+	"KR",
+	"KW",
+	"KG",
+	"LA",
+}
+var LANGUAGE_COUNTRY = []string{
+	"fr",
+	"en",
+	"de",
+	"es",
+	"it",
+	"zh",
+	"ja",
+	"ko",
+	"pt",
+	"ru",
+	"ar",
+	"bg",
+	"ca",
+	"cs",
+	"da",
+	"el",
+	"et",
+}
 
 const TMDB_IMAGE_BACKDROP_RATIO = 1.778
 const TMDB_IMAGE_POSTER_RATIO = 0.667
@@ -58,8 +204,7 @@ func SearchForSerie(name string, year string) (TMDB_SEARCH_SERIE, error) {
 		return TMDB_SEARCH_SERIE{}, err
 	}
 	var out TMDB_SEARCH_SERIE
-	err = json.NewDecoder(resp.Body).Decode(&out)
-	if err != nil {
+	if json.NewDecoder(resp.Body).Decode(&out) != nil {
 		return TMDB_SEARCH_SERIE{}, err
 	}
 	return out, nil
@@ -76,7 +221,9 @@ func SearchForMovie(name string, year int) (TMDB_SEARCH_MOVIE, error) {
 		return TMDB_SEARCH_MOVIE{}, err
 	}
 	var result TMDB_SEARCH_MOVIE
-	json.NewDecoder(resp.Body).Decode(&result)
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return TMDB_SEARCH_MOVIE{}, err
+	}
 	defer resp.Body.Close()
 	return result, nil
 }
@@ -88,7 +235,9 @@ func MultiSearch(name string) (TMDB_MULTI_SEARCH, error) {
 	}
 	defer resp.Body.Close()
 	var result TMDB_MULTI_SEARCH
-	json.NewDecoder(resp.Body).Decode(&result)
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return TMDB_MULTI_SEARCH{}, err
+	}
 
 	return result, nil
 }
@@ -380,4 +529,46 @@ func Get_tmdb_discover_movie(release_gte string, order string, release_lte strin
 	json.Unmarshal(fullbody, &result)
 	cacheTmdb[url] = result
 	return result, nil
+}
+
+type MetadataBase struct {
+	Tmdb        string   `json:"tmdb"`
+	TmdbIso3166 string   `json:"tmdb_iso3166"`
+	Omdb        string   `json:"omdb"`
+	TmdbLang    string   `json:"tmdb_lang"`
+	TmdbImgLang []string `json:"tmdb_lang_imgs"`
+}
+
+func VerifyMetadataBase(base MetadataBase) error {
+	req, err := http.NewRequest("GET", API_URL+"/discover/movie?api_key="+base.Tmdb, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 200 {
+		return errors.New("tmdb api key is not valid")
+	}
+	if !slices.Contains(ISO3166, base.TmdbIso3166) {
+		return errors.New("tmdb iso3166 is not valid")
+	}
+	if !slices.Contains(LANGUAGE_COUNTRY, base.TmdbLang) {
+		return errors.New("tmdb lang is not valid")
+	}
+	for _, lang := range base.TmdbImgLang {
+		if !slices.Contains(append(LANGUAGE_COUNTRY, "null"), lang) {
+			return errors.New("tmdb lang imgs is not valid")
+		}
+	}
+	url := "https://www.omdbapi.com/?apikey=" + base.Omdb + "&i=" + "tt0816692"
+	resp, err = http.Get(url)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 200 {
+		return errors.New("omdb api key is not valid")
+	}
+	return nil
 }
