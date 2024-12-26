@@ -67,6 +67,11 @@ func TorrentActionController(user *engine.User, torrent_id string, action string
 			file.Download()
 		}
 		torrent.Torrent.DownloadAll()
+	case "reannounce":
+		if !user.ADMIN {
+			return errors.New("not allowed")
+		}
+		// torrent.Torrent.UseSources()
 	case "priority":
 		if !user.ADMIN {
 			return errors.New("not allowed")
@@ -109,8 +114,8 @@ func TorrentsAction(ctx *gin.Context, db *gorm.DB) {
 		ctx.JSON(401, gin.H{"error": "not logged in"})
 		return
 	}
-	torrent_id := ctx.Param("torrent_id")
-	action := ctx.Param("action")
+	torrent_id := ctx.Query("id")
+	action := ctx.Query("action")
 	deleteFiles := ctx.Query("deleteFiles")
 	fileIndex := ctx.Query("fileIndex")
 	priority := ctx.Query("priority")

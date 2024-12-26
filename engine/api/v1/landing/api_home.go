@@ -109,6 +109,9 @@ func LandingController(user *engine.User, db *gorm.DB) (interface{}, error) {
 			lines[i].Data = l.Data[0 : len(l.Data)-(len(l.Data)%6)]
 		}
 	}
+	if len(lines) > 30 {
+		lines = lines[:30]
+	}
 	return gin.H{
 		"Recents":   recents,
 		"Lines":     lines,

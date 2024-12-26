@@ -2,6 +2,8 @@ package diffusion
 
 import (
 	"fmt"
+	"net/http"
+	"strings"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
@@ -48,11 +50,21 @@ func WebServer(db *gorm.DB, port string) *gin.Engine {
 		}
 		sess := sessions.Default(ctx)
 		sess.Options(sessions.Options{
-			Secure: false,
+			Secure:   true,
+			SameSite: http.SameSiteNoneMode,
 		})
 	})
 	r.Use(static.Serve("/", static.LocalFile("./build/", false)))
-	r.NoRoute(func(ctx *gin.Context) { ctx.File("./build/index.html") })
+	r.Use(static.Serve("/admin", static.LocalFile("./admin/", false)))
+
+	r.NoRoute(func(ctx *gin.Context) {
+		if strings.HasPrefix(ctx.Request.URL.Path, "/admin") {
+			ctx.File("./admin/index.html")
+			return
+		}
+		ctx.File("./build/index.html")
+		return
+	})
 	r.POST("/api/metadata/update", func(ctx *gin.Context) { metadata.AssignFileToMedia(ctx, db) })
 	r.GET("/api/metadata/clean", func(ctx *gin.Context) { metadata.ClearMoviesWithNoMediaAndNoTmdbId(ctx, db) })
 	r.GET("/api/metadata/items", func(ctx *gin.Context) { metadata.GetUnAssignedMedias(ctx, db) })

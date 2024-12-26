@@ -23,6 +23,7 @@ type LocalStorageProps struct {
 }
 
 func (l *LocalStorage) Init(name string, channel chan error, props interface{}, paths []kosmixutil.PathElement) {
+	l.paths = paths
 	jsonData, err := json.Marshal(props)
 	if err != nil {
 		channel <- err

@@ -384,10 +384,8 @@ func TranscodeManifestController(user *engine.User, uuid string) ([]byte, error)
 	if transcoder == nil {
 		return nil, errors.New("transcoder not found")
 	}
-	channel := make(chan string)
-	go transcoder.Manifest(channel)
-	manifest := <-channel
-	return []byte(manifest), nil
+
+	return []byte(transcoder.Manifest()), nil
 }
 func TranscodeManifestWs(db *gorm.DB, request *kosmixutil.WebsocketMessage, conn *websocket.Conn) {
 	user, err := engine.GetUserWs(db, request.UserToken, []string{})

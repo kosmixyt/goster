@@ -69,7 +69,7 @@ func (t *Transcoder) GetQuality(qualityName string) (QUALITY, error) {
 	return QUALITY{}, fmt.Errorf("quality not found")
 }
 
-func (t *Transcoder) Manifest(Manifest chan string) {
+func (t *Transcoder) Manifest() string {
 	if !t.ISLIVESTREAM {
 		if !t.FETCHING_DATA && t.LENGTH == -1 {
 			panic("Must have data before manifest")
@@ -83,6 +83,7 @@ func (t *Transcoder) Manifest(Manifest chan string) {
 		manifest := []string{"#EXTM3U", "#EXT-X-VERSION:3", "#EXT-X-TARGETDURATION:" + strconv.Itoa(int(Config.Transcoder.SEGMENT_TIME)+1), "#EXT-X-MEDIA-SEQUENCE:0", "#EXT-X-PLAYLIST-TYPE:VOD"}
 		duration := t.LENGTH
 		for i := float64(0); i < float64(duration); i = i + Config.Transcoder.SEGMENT_TIME {
+			fmt.Println("i", i, "duration", duration, t.LENGTH)
 			stime := Config.Transcoder.SEGMENT_TIME
 			if i+Config.Transcoder.SEGMENT_TIME > float64(duration) {
 				stime = float64(duration) - i
@@ -92,20 +93,22 @@ func (t *Transcoder) Manifest(Manifest chan string) {
 			manifest = append(manifest, Config.Web.PublicUrl+"/transcode/segment/"+t.UUID+"/"+strconv.Itoa(int(index)))
 		}
 		manifest = append(manifest, "#EXT-X-ENDLIST")
-		Manifest <- strings.Join(manifest, "\n")
-	} else {
-		tm := time.Now()
-		t.Last_request_time = &tm
-		if t.FFMPEG == nil {
-			t.Start(0, t.QUALITYS[0], 0)
-		}
-		manifest := []string{"#EXTM3U", "#EXT-X-TARGETDURATION:" + strconv.Itoa(int(Config.Transcoder.SEGMENT_TIME)+1), "#EXT-X-VERSION:3", "#EXT-X-MEDIA-SEQUENCE:0", "#EXT-X-PLAYLIST-TYPE:EVENT"}
-		for i := 0; i < int(t.CURRENT_INDEX+1); i++ {
-			manifest = append(manifest, "#EXTINF:"+fmt.Sprintf("%.*f", 3, Config.Transcoder.SEGMENT_TIME))
-			manifest = append(manifest, Config.Web.PublicUrl+"/transcode/segment/"+t.UUID+"/"+strconv.Itoa(i))
-		}
-		Manifest <- strings.Join(manifest, "\n")
+		// Manifest <- strings.Join(manifest, "\n")
+		return strings.Join(manifest, "\n")
 	}
+	tm := time.Now()
+	t.Last_request_time = &tm
+	if t.FFMPEG == nil {
+		t.Start(0, t.QUALITYS[0], 0)
+	}
+	manifest := []string{"#EXTM3U", "#EXT-X-TARGETDURATION:" + strconv.Itoa(int(Config.Transcoder.SEGMENT_TIME)+1), "#EXT-X-VERSION:3", "#EXT-X-MEDIA-SEQUENCE:0", "#EXT-X-PLAYLIST-TYPE:EVENT"}
+	for i := 0; i < int(t.CURRENT_INDEX+1); i++ {
+		manifest = append(manifest, "#EXTINF:"+fmt.Sprintf("%.*f", 3, Config.Transcoder.SEGMENT_TIME))
+		manifest = append(manifest, Config.Web.PublicUrl+"/transcode/segment/"+t.UUID+"/"+strconv.Itoa(i))
+	}
+	// Manifest <- strings.Join(manifest, "\n")
+	return strings.Join(manifest, "\n")
+
 }
 
 func (t *Transcoder) ManifestUrl() string {

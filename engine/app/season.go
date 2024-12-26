@@ -33,6 +33,7 @@ func (s *SEASON) HasFile() bool {
 	}
 	for _, episode := range s.EPISODES {
 		if len(episode.FILES) > 0 {
+			fmt.Println("[INFO] Season", s.ID, "has file", episode.FILES[0].FILENAME)
 			return true
 		}
 	}
@@ -116,3 +117,8 @@ func (s *SEASON) GetSearchName(tv *TV) []string {
 		tv.ORIGINAL_NAME + " S" + j,
 	}
 }
+
+// season.hasfile() bug
+// addModal bug when request closing and can't reopen -> filter torrents by downloadable and existing (validate torrent)
+// filter homepage by has backdrop
+// move torrent file
