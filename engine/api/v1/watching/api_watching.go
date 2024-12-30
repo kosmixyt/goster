@@ -35,7 +35,7 @@ func DeleteFromWatchingList(ctx *gin.Context, db *gorm.DB) {
 		ctx.JSON(401, gin.H{"error": "not logged in"})
 		return
 	}
-	if err := DeleteFromWatchingListController(&user, db, ctx.Query("type"), ctx.Query("id")); err != nil {
+	if err := DeleteFromWatchingListController(&user, db, ctx.Query("type"), ctx.Query("uuid")); err != nil {
 		ctx.JSON(400, gin.H{"error": err.Error()})
 		return
 	}

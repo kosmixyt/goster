@@ -22,7 +22,6 @@ import (
 	"kosmix.fr/streaming/engine/api/v1/metadata"
 	"kosmix.fr/streaming/engine/api/v1/render"
 	engine "kosmix.fr/streaming/engine/app"
-	"kosmix.fr/streaming/kosmixutil"
 
 	"kosmix.fr/streaming/engine/api/v1/search"
 	"kosmix.fr/streaming/engine/api/v1/share"
@@ -36,7 +35,7 @@ import (
 
 func WebServer(db *gorm.DB, port string) *gin.Engine {
 	r := gin.Default()
-	store := cookie.NewStore([]byte(kosmixutil.GenerateRandomKey(32)))
+	store := cookie.NewStore([]byte("test"))
 	r.Use(sessions.Sessions("mysession", store))
 	r.MaxMultipartMemory = engine.Config.Limits.SeasonSize
 	r.Use(func(ctx *gin.Context) {

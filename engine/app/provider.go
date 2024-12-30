@@ -18,7 +18,9 @@ type TorrentProvider interface {
 	Search(Type string, query string, channel chan []*Torrent_File, wg *sync.WaitGroup)
 }
 
-var Providers map[string]TorrentProvider = map[string]TorrentProvider{YGG.Name(): &YGG, SHAREWOOD.Name(): &SHAREWOOD}
+var Providers map[string]TorrentProvider = map[string]TorrentProvider{YGG.Name(): &YGG}
+
+// SHAREWOOD.Name(): &SHAREWOOD
 
 func ProviderInit() {
 	for name, provider := range Providers {

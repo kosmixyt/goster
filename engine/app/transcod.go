@@ -82,6 +82,9 @@ func (t *Transcoder) Manifest() string {
 		}
 		manifest := []string{"#EXTM3U", "#EXT-X-VERSION:3", "#EXT-X-TARGETDURATION:" + strconv.Itoa(int(Config.Transcoder.SEGMENT_TIME)+1), "#EXT-X-MEDIA-SEQUENCE:0", "#EXT-X-PLAYLIST-TYPE:VOD"}
 		duration := t.LENGTH
+		if Config.Transcoder.SEGMENT_TIME == 0 {
+			panic("Segment time must be greater than 0")
+		}
 		for i := float64(0); i < float64(duration); i = i + Config.Transcoder.SEGMENT_TIME {
 			fmt.Println("i", i, "duration", duration, t.LENGTH)
 			stime := Config.Transcoder.SEGMENT_TIME
@@ -187,6 +190,7 @@ func (t *Transcoder) Chunk(index int, quality QUALITY, trackIndex int) (io.Reade
 		return nil, fmt.Errorf("invalid index")
 	}
 	if index > int(t.START_INDEX) && index < int(t.CURRENT_INDEX) && t.CURRENT_QUALITY.Name == quality.Name && t.CURRENT_TRACK == trackIndex {
+		fmt.Println("reading from cache", index)
 		return ReadTranscodeFile(Joins(HLS_OUTPUT_PATH, (t.UUID)+"_"+t.CURRENT_QUALITY.Name+"_"+strconv.Itoa(t.CURRENT_TRACK)+"_"+fmt.Sprintf("%0"+strconv.Itoa(FormatZero)+"d", index)+".ts")), nil
 	}
 	if t.CURRENT_QUALITY.Name != quality.Name || t.CURRENT_TRACK != trackIndex {
@@ -340,7 +344,7 @@ func (t *Transcoder) Start(index int, Quality QUALITY, trackIndex int) {
 
 	cmdVideo = append(cmdVideo, []string{
 		"-threads", strconv.Itoa(Config.Transcoder.MaxTranscoderThreads),
-		"-maxrate", "10000K",
+		// "-maxrate", "10000K",
 		"-r", "30",
 		"-map", "0:v:0",
 		"-map", "0:a:" + strconv.Itoa(trackIndex),
@@ -351,7 +355,7 @@ func (t *Transcoder) Start(index int, Quality QUALITY, trackIndex int) {
 	}...)
 	cmdTail := []string{
 		"-f", "segment",
-		"-segment_time_delta", "0.1",
+		"-segment_time_delta", "0.5",
 		"-segment_format", "mpegts",
 		"-segment_list", "pipe:1",
 		"-segment_time", strconv.FormatFloat(float64(Config.Transcoder.SEGMENT_TIME), 'f', -1, 64),

@@ -32,3 +32,5 @@ streaming.db-journal
 goster.lnk
 config.save.json
 myapp-linux
+myapp
+run

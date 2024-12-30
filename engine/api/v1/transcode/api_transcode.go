@@ -311,23 +311,28 @@ func TranscodeSegmentController(user *engine.User, uuid string, number string, Q
 	if QualityName == "" {
 		QualityName = "1080p"
 	}
-	TrackIndex := 0
-	if _, err := fmt.Sscanf(x_track, "%d", &TrackIndex); err != nil {
-		return nil, errors.New("invalid track")
+	TrackIndex, err := strconv.Atoi(x_track)
+	fmt.Println("xtrack", x_track, transcoder.HasAudioStream(TrackIndex), err)
+	if err != nil {
+		fmt.Println("invalid track (not integer)")
+		return nil, err
 	}
 	if !transcoder.HasAudioStream(TrackIndex) {
+		fmt.Println("track has no audio stream")
 		return nil, errors.New("invalid track")
 	}
 	qual, err := transcoder.GetQuality(QualityName)
 	if err != nil {
+		fmt.Println("invalid quality")
 		return nil, errors.New("invalid quality")
 	}
 	if currentPlayBack != "" {
-		var current int64 = 0
-		if _, err = fmt.Sscanf(currentPlayBack, "%d", &current); err != nil {
-			return nil, errors.New("invalid current")
+		current, err := strconv.ParseFloat(currentPlayBack, 64)
+		if err != nil {
+			fmt.Println("invalid current time")
+			return nil, errors.New("invalid current time")
 		}
-		transcoder.SetCurrentTime(current, index)
+		transcoder.SetCurrentTime(int64(current), index)
 	}
 	transcoder.Request_pending = true
 	ct := time.Now()
@@ -335,6 +340,7 @@ func TranscodeSegmentController(user *engine.User, uuid string, number string, Q
 	segment, err := transcoder.Chunk(index, qual, TrackIndex)
 	transcoder.Request_pending = false
 	if err != nil {
+		fmt.Println("error while getting segment", err)
 		transcoder.Task.AddLog("Error while getting segment: " + err.Error())
 		return nil, errors.New("error while getting segment")
 	}
@@ -342,6 +348,7 @@ func TranscodeSegmentController(user *engine.User, uuid string, number string, Q
 	if err != nil {
 		return nil, errors.New("error while reading segment")
 	}
+	fmt.Println("segment retrieved in", time.Since(ct))
 	// ctx.Writer.Header().Set("Content-Length", fmt.Sprintf("%d", len(data)))
 	// ctx.Data(200, "application/octet-stream", data)
 	return data, nil

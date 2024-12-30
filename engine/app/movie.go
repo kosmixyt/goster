@@ -284,7 +284,7 @@ func (m *MOVIE) SimilarMovies(preloads func() *gorm.DB, max int) []MOVIE {
 		Joins("JOIN movie_genres ON movies.id = movie_genres.movie_id").
 		Where("movie_genres.genre_id IN (?)", m.GenreIds()).
 		Where("movies.id != ?", m.ID).
-		Limit(-1).
+		Limit(40).
 		Find(&movies)
 	return movies
 }
@@ -345,7 +345,7 @@ func InsertMovieInDb(db *gorm.DB, movie int, year int64, InsertIfNotExist bool, 
 		nyear, err := strconv.Atoi(year)
 		if err != nil {
 			fmt.Println("Cannot convert release date to int")
-			panic(err)
+			nyear = 0
 		}
 		movieInDb = MOVIE{
 			DOWNLOAD:            0,
