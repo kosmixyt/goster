@@ -473,7 +473,8 @@ func GetVideo(videos []TMDB_VIDEO_ITEM) (TMDB_VIDEO_ITEM, error) {
 	return TMDB_VIDEO_ITEM{}, errors.New("no video found")
 }
 
-var cacheTmdb map[string]TMDB_SEARCH_MOVIE = make(map[string]TMDB_SEARCH_MOVIE)
+var cacheRdRw = sync.Mutex{}
+var TmdbCache map[string]TMDB_SEARCH_MOVIE = make(map[string]TMDB_SEARCH_MOVIE)
 
 func Get_tmdb_discover_movie(release_gte string, order string, release_lte string, watch_region string, withGenre []int, withKeywords []int, withOriginCountry string, withOriginalLanguage string, runtime_gte int32, runtime_lte int32, withWatchProviders []int) (TMDB_SEARCH_MOVIE, error) {
 	// https://api.themoviedb.org/3/watch/providers/movie?watch_region=FR&api_key=
@@ -512,10 +513,13 @@ func Get_tmdb_discover_movie(release_gte string, order string, release_lte strin
 	if len(withWatchProviders) > 0 {
 		url += "&with_watch_providers=" + strings.Trim(strings.Join(strings.Fields(fmt.Sprint(withWatchProviders)), ","), "[]")
 	}
-	if val, ok := cacheTmdb[url]; ok {
+	cacheRdRw.Lock()
+	if val, ok := TmdbCache[url]; ok {
+		cacheRdRw.Unlock()
 		fmt.Println("Cache hit")
 		return val, nil
 	}
+	cacheRdRw.Unlock()
 	fmt.Println(url)
 	resp, err := http.Get(url)
 	if err != nil {
@@ -527,7 +531,10 @@ func Get_tmdb_discover_movie(release_gte string, order string, release_lte strin
 		return TMDB_SEARCH_MOVIE{}, err
 	}
 	json.Unmarshal(fullbody, &result)
-	cacheTmdb[url] = result
+	defer resp.Body.Close()
+	cacheRdRw.Lock()
+	TmdbCache[url] = result
+	cacheRdRw.Unlock()
 	return result, nil
 }
 

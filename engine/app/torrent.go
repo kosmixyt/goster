@@ -247,11 +247,16 @@ func AddTorrent(user *User, torrent *Torrent_File, mediaId uint, mediaType strin
 	if err != nil || !new {
 		return nil, &AddTorrentError{err, false}
 	}
+	fmt.Println("size of torrent is ", torrentElem.Length())
 	progress("Waiting for torrent info")
 	torrent_size := torrentElem.Length()
 	if !user.CanUpload(torrent_size) {
 		torrentElem.Drop()
 		return nil, &AddTorrentError{errors.New("u:user reached upload limit"), true}
+	}
+	if torrent_size > max_size {
+		torrentElem.Drop()
+		return nil, &AddTorrentError{errors.New("u:torrent size is too big"), false}
 	}
 	user.Add_upload(torrent_size)
 	torrentItemDb := Torrent{

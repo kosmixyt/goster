@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -227,7 +228,6 @@ func NewTranscoderController(
 		progress(engine.ServerSideError, task.SetAsError(err).(error).Error())
 		return
 	}
-
 	progress("transcoder", string(b))
 }
 
@@ -243,7 +243,12 @@ func NewTranscoder(app *gin.Engine, ctx *gin.Context, db *gorm.DB) {
 		db,
 		&user,
 		func(event, data string) {
-			kosmixutil.SendEvent(ctx, event, data)
+			fmt.Printf("writting")
+			ctx.SSEvent(event, data)
+			flusher, ok := ctx.Writer.(http.Flusher)
+			if ok {
+				flusher.Flush()
+			}
 		},
 		ctx.Query("fileId"),
 		ctx.Query("type"),

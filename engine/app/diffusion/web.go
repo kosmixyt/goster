@@ -52,6 +52,10 @@ func WebServer(db *gorm.DB, port string) *gin.Engine {
 			Secure:   true,
 			SameSite: http.SameSiteNoneMode,
 		})
+		//sess.Options(sessions.Options{
+		//	Secure:   false,
+		//	SameSite: http.SameSiteLaxMode,
+		//})
 	})
 	r.Use(static.Serve("/", static.LocalFile("./build/", false)))
 	r.Use(static.Serve("/admin", static.LocalFile("./admin/", false)))
@@ -112,10 +116,8 @@ func WebServer(db *gorm.DB, port string) *gin.Engine {
 	r.GET("/api/torrents/file", func(ctx *gin.Context) { torrents.TorrentFileDownload(ctx, db) })
 	r.GET("/api/torrents/action", func(ctx *gin.Context) { torrents.TorrentsAction(ctx, db) })
 	r.GET("/api/torrents/storage", func(ctx *gin.Context) { admin.GetAvailablePaths(ctx, db) })
-
 	r.GET("/api/admin/metadata/get", func(ctx *gin.Context) { admin.GetTmdb(ctx, db) })
 	r.POST("/api/admin/metadata/set", func(ctx *gin.Context) { admin.SetTmdb(ctx, db) })
-
 	r.GET("/api/admin/path/add", func(ctx *gin.Context) { admin.AddPath(ctx, db) })
 	r.GET("/api/admin/scan", func(ctx *gin.Context) { admin.Rescan(ctx, db) })
 	r.GET("/api/admin/storage/browse", func(ctx *gin.Context) { admin.ListDir(ctx, db) })

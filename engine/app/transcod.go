@@ -86,7 +86,6 @@ func (t *Transcoder) Manifest() string {
 			panic("Segment time must be greater than 0")
 		}
 		for i := float64(0); i < float64(duration); i = i + Config.Transcoder.SEGMENT_TIME {
-			fmt.Println("i", i, "duration", duration, t.LENGTH)
 			stime := Config.Transcoder.SEGMENT_TIME
 			if i+Config.Transcoder.SEGMENT_TIME > float64(duration) {
 				stime = float64(duration) - i
