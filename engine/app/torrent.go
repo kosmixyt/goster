@@ -57,7 +57,6 @@ func DeleteTorrent(uuid uint) {
 		}
 	}
 }
-
 func SearchAndDownloadTorrent(db *gorm.DB, user *User, movie *MOVIE, episode *EPISODE, season *SEASON, serie *TV, preferedTorrent_file_id string, reader chan *FILE, errorChan chan error, task *Task, progress func(string)) {
 	if movie == nil && (serie == nil || episode == nil || season == nil) {
 		reader <- nil
@@ -281,19 +280,19 @@ func AddTorrent(user *User, torrent *Torrent_File, mediaId uint, mediaType strin
 	<-torrentElem.GotInfo()
 	progress("Torrent info received")
 	item_tos := GlTorrentItem{
-		Torrent:  torrentElem,
-		DB_ITEM:  &torrentItemDb,
-		OWNER_ID: user.ID,
-		//MEDIA_TYPE: mediaType,
-		//MEDIA_UUID: mediaId,
+		OWNER_ID:       user.ID,
+		Torrent:        torrentElem,
+		DB_ITEM:        &torrentItemDb,
+		START_DOWNLOAD: 0,
+		START_UPLOAD:   0,
+		START:          time.Now(),
 	}
 	TORRENT_ITEMS = append(TORRENT_ITEMS, &item_tos)
 	progress("Registering handlers")
-	go RegisterHandlers(item_tos.Torrent, &torrentItemDb, db, user)
+	//go RegisterHandlers(item_tos.Torrent, &torrentItemDb, db, user)
 	progress("Handlers registered")
 	return &item_tos, nil
 }
-
 func FindBestTorrentFor(serie *TV, movie *MOVIE, season *SEASON, episode *EPISODE, min_seed int, max_size int64) ([]*Torrent_File, error) {
 	start := time.Now()
 	// cache
@@ -447,7 +446,6 @@ func SearchTorrent(tv *TV, movie *MOVIE, season *SEASON) []*Torrent_File {
 	}
 	return results
 }
-
 func InitTorrents(db *gorm.DB) {
 	var torrents []*Torrent
 	db.Preload("USER").Preload("FILES").Find(&torrents)
@@ -479,11 +477,13 @@ func InitTorrents(db *gorm.DB) {
 				file.SetPriority(torrent.PiecePriorityNone)
 			}
 			TORRENT_ITEMS = append(TORRENT_ITEMS, &GlTorrentItem{
-				OWNER_ID: torrentItem.USER_ID,
-				Torrent:  torrentElem,
-				DB_ITEM:  torrentItem,
+				OWNER_ID:       torrentItem.USER_ID,
+				Torrent:        torrentElem,
+				DB_ITEM:        torrentItem,
+				START_DOWNLOAD: torrentItem.DOWNLOAD,
+				START_UPLOAD:   torrentItem.UPLOAD,
+				START:          torrentItem.CreatedAt,
 			})
-			go RegisterHandlers(torrentElem, torrentItem, db, &torrentItem.USER)
 			channels <- nil
 		}(item)
 	}
@@ -492,44 +492,70 @@ func InitTorrents(db *gorm.DB) {
 			panic(err)
 		}
 	}
+	go handlers_push_db()
 }
 
-func RegisterHandlers(torrent *torrent.Torrent, dbElement *Torrent, db *gorm.DB, user *User) {
-	if user.TORRENT_DOWNLOAD_STRATEGY == "full" {
-		torrent.DownloadAll()
-	}
-	startDownloaded := dbElement.DOWNLOAD
-	startUploaded := dbElement.UPLOAD
-	startDlPath := dbElement.DL_PATH
-	startTime := time.Now()
+func handlers_push_db() {
 	for {
-		if tx := db.Where("id = ?", dbElement.ID).Find(&dbElement); tx.Error != nil {
-			fmt.Println("Error finding torrent in database (must be deleted)")
-			return
-		}
-		if dbElement.DL_PATH != startDlPath {
-			fmt.Println("Torrent path changed")
-			return
-		}
-		if startDownloaded == 0 {
-			if (float64(torrent.BytesCompleted())/float64(torrent.Length())) > float64(0.01) && dbElement.TIME_TO_1_PERCENT == 0 {
-				db.Model(dbElement).Update("TIME_TO_1_PERCENT", time.Since(startTime).Seconds())
+		for _, item := range TORRENT_ITEMS {
+			if tx := db.Where("id = ?", item.DB_ITEM.ID).Find(&item.DB_ITEM); tx.Error != nil {
+				panic(tx.Error)
 			}
-		}
-		total := torrent.Length()
-		stats := torrent.Stats()
-		if tx := db.Model(dbElement).Updates(Torrent{
-			DOWNLOAD: stats.BytesReadUsefulData.Int64() + startDownloaded,
-			UPLOAD:   stats.BytesWrittenData.Int64() + startUploaded,
-			Progress: (float64(torrent.BytesCompleted()) / float64(total)),
-			FINISHED: torrent.BytesCompleted() == total,
-		}).Error; tx != nil {
-			fmt.Println("Error updating torrent in database", tx.Error())
-			return
+			if item.START_DOWNLOAD == 0 && item.DB_ITEM.TIME_TO_1_PERCENT == 0 && float64(item.Torrent.BytesCompleted())/float64(item.Torrent.Length()) > 0.01 {
+				item.DB_ITEM.TIME_TO_1_PERCENT = time.Since(item.START).Seconds()
+			}
+			total := item.Torrent.Length()
+			stats := item.Torrent.Stats()
+			update := Torrent{
+				DOWNLOAD: stats.BytesReadUsefulData.Int64() + item.START_DOWNLOAD,
+				UPLOAD:   stats.BytesWrittenData.Int64() + item.START_UPLOAD,
+				Progress: (float64(item.Torrent.BytesCompleted()) / float64(total)),
+				FINISHED: item.Torrent.BytesCompleted() == total,
+			}
+			if tx := db.Model(item.DB_ITEM).Updates(update).Error; tx != nil {
+				panic(tx)
+			}
 		}
 		time.Sleep(5 * time.Second)
 	}
 }
+
+//func RegisterHandlers(torrent *torrent.Torrent, dbElement *Torrent, db *gorm.DB, user *User) {
+//	if user.TORRENT_DOWNLOAD_STRATEGY == "full" {
+//		torrent.DownloadAll()
+//	}
+//	startDownloaded := dbElement.DOWNLOAD
+//	startUploaded := dbElement.UPLOAD
+//	startDlPath := dbElement.DL_PATH
+//	startTime := time.Now()
+//	for {
+//		if tx := db.Where("id = ?", dbElement.ID).Find(&dbElement); tx.Error != nil {
+//			fmt.Println("Error finding torrent in database (must be deleted)")
+//			return
+//		}
+//		if dbElement.DL_PATH != startDlPath {
+//			fmt.Println("Torrent path changed")
+//			return
+//		}
+//		if startDownloaded == 0 {
+//			if (float64(torrent.BytesCompleted())/float64(torrent.Length())) > float64(0.01) && dbElement.TIME_TO_1_PERCENT == 0 {
+//				db.Model(dbElement).Update("TIME_TO_1_PERCENT", time.Since(startTime).Seconds())
+//			}
+//		}
+//		total := torrent.Length()
+//		stats := torrent.Stats()
+//		if tx := db.Model(dbElement).Updates(Torrent{
+//			DOWNLOAD: stats.BytesReadUsefulData.Int64() + startDownloaded,
+//			UPLOAD:   stats.BytesWrittenData.Int64() + startUploaded,
+//			Progress: (float64(torrent.BytesCompleted()) / float64(total)),
+//			FINISHED: torrent.BytesCompleted() == total,
+//		}).Error; tx != nil {
+//			fmt.Println("Error updating torrent in database", tx.Error())
+//			return
+//		}
+//		time.Sleep(5 * time.Second)
+//	}
+//}
 
 var movingIds = []uint{}
 
@@ -650,12 +676,11 @@ func MoveTargetStorage(torrentItem *torrent.Torrent, dbElement *Torrent, db *gor
 		}
 	}
 	item.Torrent = torrentElem // update torrent item
-	go RegisterHandlers(torrentElem, dbElement, db, &dbElement.USER)
+	//go RegisterHandlers(torrentElem, dbElement, db, &dbElement.USER)
 	fmt.Println("Torrent moved to: ", targetPath)
 	movingIds = slices.DeleteFunc(movingIds, func(i uint) bool { return i == dbElement.ID })
 	success <- nil
 }
-
 func CleanDeleteTorrent(withFiles bool, torrent *GlTorrentItem, db *gorm.DB) error {
 	if torrent.Torrent == nil {
 		panic("Torrent not found")
