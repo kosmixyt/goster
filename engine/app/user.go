@@ -142,7 +142,7 @@ func (user *User) GetUserTorrent(uuid uint) *GlTorrentItem {
 		if item.OWNER_ID == 0 {
 			panic("Owner id is 0")
 		}
-		if (item.DB_ID) == uuid && item.OWNER_ID == user.ID {
+		if item.DB_ITEM.ID == uuid && item.OWNER_ID == user.ID {
 			return item
 		}
 	}

@@ -83,6 +83,13 @@ type Range struct {
 	Length int64
 }
 
+func BoolInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
 // ContentRange returns Content-Range header value.
 func (r Range) ContentRange(size int64) string {
 	return fmt.Sprintf("bytes %d-%d/%d", r.Start, r.Start+r.Length-1, size)

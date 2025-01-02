@@ -227,7 +227,6 @@ func (f *FILE) GetFileInTorrent() *torrent.File {
 			return fileinto
 		}
 	}
-	fmt.Println("f.FILENAME", f.FILENAME, torrent.Torrent.Name(), torrent.DB_ID)
 	panic("File not found in torrent" + f.FILENAME)
 }
 

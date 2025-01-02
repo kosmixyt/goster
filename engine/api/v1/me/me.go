@@ -62,7 +62,7 @@ func HandleMeController(user *engine.User, db *gorm.DB) (*Me, error) {
 	torrent := user.GetTorrents()
 	for _, t := range torrent {
 		var torrentDbItem *engine.Torrent
-		if err := db.Where("id = ?", t.DB_ID).
+		if err := db.Where("id = ?", t.DB_ITEM.ID).
 			Preload("FILES").
 			Preload("FILES.TV").
 			Preload("FILES.EPISODE").

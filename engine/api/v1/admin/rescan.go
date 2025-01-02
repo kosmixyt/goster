@@ -165,11 +165,18 @@ func CreateStorage(ctx *gin.Context, db *gorm.DB) {
 		return
 	}
 	err = CreateStorageController(&user, payload)
+	if err != nil {
+		ctx.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
 }
 
 func CreateStorageController(user *engine.User, payload CreateStoragesRequest) error {
 	if !user.ADMIN {
 		return engine.ErrorIsNotAdmin
+	}
+	if err := engine.CreateStorage(payload.Name, payload.TYPE, payload.OPTIONS); err != nil {
+		return err
 	}
 	return nil
 }

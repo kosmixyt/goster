@@ -25,7 +25,7 @@ func TorrentFile(ctx *gin.Context, db *gorm.DB) {
 		return
 	}
 	var torrentDbItem *engine.Torrent
-	if err := db.Where("id = ?", torrent.DB_ID).First(&torrentDbItem).Error; err != nil {
+	if err := db.Where("id = ?", torrent.DB_ITEM.ID).First(&torrentDbItem).Error; err != nil {
 		ctx.JSON(500, gin.H{"error": "could not find torrent in database"})
 		return
 	}

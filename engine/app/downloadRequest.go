@@ -107,7 +107,7 @@ func (req *DownloadRequest) Check() error {
 		}
 		RegisterFilesInTorrent(item, req.Movie, req.TV_SEASON)
 		req.STATUS = "finished"
-		db.Model(req).Updates(map[string]interface{}{"STATUS": req.STATUS, "TORRENT_ID": item.DB_ID})
+		db.Model(req).Updates(map[string]interface{}{"STATUS": req.STATUS, "TORRENT_ID": item.DB_ITEM.ID})
 		return nil
 	}
 	return errors.New("no torrent found")

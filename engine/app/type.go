@@ -12,6 +12,8 @@ type GlTorrentItem struct {
 	Torrent        *torrent.Torrent
 	DB_ITEM        *Torrent
 	START_DOWNLOAD int64
+	MEDIA_UUID     uint
+	MEDIA_TYPE     string
 	START_UPLOAD   int64
 	START          time.Time
 }
@@ -170,7 +172,7 @@ type Torrent struct {
 	DOWNLOAD          int64            `gorm:"not null"`
 	UPLOAD            int64            `gorm:"not null"`
 	TIME_TO_1_PERCENT float64          `gorm:"default:null"`
-	FILES             []FILE           `gorm:"foreignKey:TORRENT_ID"`
+	FILES             []*FILE          `gorm:"foreignKey:TORRENT_ID"`
 	DL_PATH           string           `gorm:"not null;default:wesh alors"`
 	PROVIER_NAME      string           `gorm:"not null"`
 	REQUESTS          *DownloadRequest `gorm:"foreignKey:TORRENT_ID"`

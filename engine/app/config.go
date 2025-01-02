@@ -233,6 +233,9 @@ func DeleteStorage(name string) error {
 	}
 	return fmt.Errorf("storage not found (may be already deleted)")
 }
+func CreateStorage(name string, storage_type string, options map[string]string) error {
+	return nil
+}
 func AddPath(name string, AddPath kosmixutil.PathElement) error {
 	for _, storage := range NewConfig.Locations {
 		if storage.Name == name {

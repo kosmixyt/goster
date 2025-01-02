@@ -23,7 +23,7 @@ func TorrentActionController(user *engine.User, torrent_id string, action string
 		return errors.New("torrent not found")
 	}
 	var torrentDbItem *engine.Torrent
-	if err := db.Where("id = ?", torrent.DB_ID).First(&torrentDbItem).Error; err != nil {
+	if err := db.Where("id = ?", torrent.DB_ITEM.ID).First(&torrentDbItem).Error; err != nil {
 		return err
 	}
 	switch action {
