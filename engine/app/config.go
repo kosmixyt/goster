@@ -234,6 +234,23 @@ func DeleteStorage(name string) error {
 	return fmt.Errorf("storage not found (may be already deleted)")
 }
 func CreateStorage(name string, storage_type string, options map[string]string) error {
+	store, err := DispatchStorage(storage_type)
+	if err != nil {
+		return err
+	}
+	channel := make(chan error)
+	go store.Init(name, channel, options, []kosmixutil.PathElement{})
+	err = <-channel
+	if err != nil {
+		return err
+	}
+	store.Close()
+	NewConfig.Locations = append(NewConfig.Locations, StorageElement{
+		TYPE:    storage_type,
+		Options: options,
+		Paths:   []kosmixutil.PathElement{},
+		Name:    name,
+	})
 	return nil
 }
 func AddPath(name string, AddPath kosmixutil.PathElement) error {

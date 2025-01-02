@@ -127,3 +127,6 @@ func (l *LocalStorage) ListDir(path string) ([]os.FileInfo, error) {
 	}
 	return infos, nil
 }
+func (l *LocalStorage) Close() error {
+	return nil
+}

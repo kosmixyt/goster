@@ -58,14 +58,11 @@ func (s *SftpStorage) Init(name string, channel chan error, props interface{}, p
 	if err != nil {
 		channel <- err
 	}
-	// defer client.Close()
-	// fmt.Println("Connected to sftp", data.User, data.Pass)
 	sftpClient, err := sftp.NewClient(client)
 	if err != nil {
 		channel <- errors.New("cannot create sftp client verify your credentials")
 	}
 	s.sftpClient = sftpClient
-
 	s.props = data
 	s.name = name
 	channel <- nil
@@ -141,4 +138,8 @@ func (s *SftpStorage) Type() string {
 
 func (s SftpStorage) ListDir(path string) ([]os.FileInfo, error) {
 	return s.sftpClient.ReadDir(path)
+}
+
+func (s *SftpStorage) Close() error {
+	return s.sftpClient.Close()
 }

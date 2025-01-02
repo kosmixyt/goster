@@ -22,4 +22,5 @@ type Storage interface {
 	Rename(oldPath string, newPath string) error
 	Type() string
 	ListDir(path string) ([]os.FileInfo, error)
+	Close() error
 }

@@ -2,6 +2,7 @@ package torrents
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 
 	"github.com/anacrolix/torrent/types"
@@ -51,6 +52,7 @@ func TorrentActionController(user *engine.User, torrent_id string, action string
 		if !user.ADMIN {
 			return errors.New("not allowed")
 		}
+		fmt.Println("deleteFiles", deleteFiles)
 		if err := engine.CleanDeleteTorrent(deleteFiles == "true", torrent, db); err != nil {
 			return err
 		}

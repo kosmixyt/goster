@@ -671,12 +671,12 @@ func CleanDeleteTorrent(withFiles bool, torrent *GlTorrentItem, db *gorm.DB) err
 		panic("Torrent not found")
 	}
 	var files []*FILE
-	if err := db.Preload("TORRENT").Find(&files, "torrent_id = ?", torrent.DB_ITEM).Error; err != nil {
+	if err := db.Preload("TORRENT").Find(&files, "torrent_id = ?", torrent.DB_ITEM.ID).Error; err != nil {
 		panic(err)
 	}
-	if !withFiles && files[0].TORRENT.DL_PATH == Config.Torrents.DownloadPath {
-		return errors.New("can't delete default download path must move to normal storage before")
-	}
+	// if !withFiles && files[0].TORRENT.DL_PATH == Config.Torrents.DownloadPath {
+	// return errors.New("can't delete default download path must move to normal storage before")
+	// }
 	if len(files) == 0 {
 		panic("No files found")
 	}

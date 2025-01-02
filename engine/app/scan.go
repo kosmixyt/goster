@@ -34,8 +34,7 @@ func InitStoragesConnection(locations []StorageElement) error {
 	localDeclared := false
 	for _, location := range locations {
 		if localDeclared && location.TYPE == "local" {
-			// panic("Local storage already declared")
-			return fmt.Errorf("2 Local storage declared")
+			return fmt.Errorf("Local storage declared")
 		}
 
 		if location.TYPE == "local" {
