@@ -325,7 +325,15 @@ type TranscoderRes struct {
 	Poster            string        `json:"poster"`
 	Backdrop          string        `json:"backdrop"`
 	IsLive            bool          `json:"isLive"`
-	Next              SKINNY_RENDER `json:"next"`
+	Next              NextFile      `json:"next"`
 	Task_id           uint          `json:"task_id"`
 	IsBrowserPlayable bool          `json:"isBrowserPlayable"`
+}
+type NextFile struct {
+	TYPE          string
+	TRANSCODE_URL string
+	DOWNLOAD_URL  string
+	BACKDROP      string
+	NAME          string
+	FILENAME      string
 }

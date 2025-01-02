@@ -230,6 +230,10 @@ func (f *FILE) GetFileInTorrent() *torrent.File {
 	panic("File not found in torrent" + f.FILENAME)
 }
 
+func (f *FILE) toNextFile(episode *EPISODE, movie *MOVIE) *NextFile {
+	return &NextFile{}
+}
+
 func (f *FILE) FfprobeData(app *gin.Engine) (*FFPROBE_DATA, error) {
 	args := []string{}
 	url := f.Ffurl(app)
