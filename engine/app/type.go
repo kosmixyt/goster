@@ -211,6 +211,7 @@ type MovieItem struct {
 	TRAILER       string
 	DOWNLOAD_URL  string
 	TRANSCODE_URL string
+	WATCHLISTED   bool
 }
 type WatchData struct {
 	TOTAL      int64
@@ -233,6 +234,7 @@ type TVItem struct {
 	PROVIDERS    []PROVIDERItem
 	SIMILARS     []SKINNY_RENDER
 	DESCRIPTION  string
+	WATCHLISTED  bool
 	RUNTIME      int
 	GENRE        []GenreItem
 	BACKDROP     string

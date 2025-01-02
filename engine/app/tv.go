@@ -118,6 +118,7 @@ func (tv *TV) Render(user *User) TVItem {
 		DESCRIPTION:  tv.DESCRIPTION,
 		RUNTIME:      tv.RUNTIME,
 		TRAILER:      tv.TRAILER_URL,
+		WATCHLISTED:  len(tv.WATCHLISTS) > 0,
 		GENRE:        ParseGenreItem(tv.GENRE),
 		SEASONS:      tv.ToSeason(),
 	}

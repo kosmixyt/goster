@@ -210,6 +210,7 @@ func (movie *MOVIE) Render(user *User) MovieItem {
 		Vote_average:  movie.Vote_average,
 		TAGLINE:       movie.TAGLINE,
 		TYPE:          "movie",
+		WATCHLISTED:   len(movie.WATCHLISTS) > 0,
 		SIMILARS:      MapMovieSkinny(movie.SimilarMovies(user.SkinnyMoviePreloads, 10)),
 		DESCRIPTION:   movie.DESCRIPTION,
 		TRAILER:       movie.TRAILER_URL,
