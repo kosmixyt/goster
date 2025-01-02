@@ -59,49 +59,6 @@ func PanicOnError(err error) {
 	}
 }
 
-// var QUALITYS = []QUALITY{
-// 	{
-// 		Name:              "1080p-extra",
-// 		Resolution:        1080,
-// 		Width:             1920,
-// 		VideoBitrate:      4000,
-// 		AudioBitrate:      320,
-// 		BitrateMultiplier: 1,
-// 	},
-// 	{
-// 		Name:              "1080p",
-// 		Resolution:        1080,
-// 		Width:             1920,
-// 		VideoBitrate:      3500,
-// 		AudioBitrate:      200,
-// 		BitrateMultiplier: 0.9,
-// 	},
-// 	{
-// 		Name:              "720p",
-// 		Resolution:        720,
-// 		Width:             1280,
-// 		VideoBitrate:      3000,
-// 		AudioBitrate:      128,
-// 		BitrateMultiplier: 0.8,
-// 	},
-// 	{
-// 		Name:              "480p",
-// 		Resolution:        480,
-// 		Width:             854,
-// 		VideoBitrate:      2500,
-// 		AudioBitrate:      128,
-// 		BitrateMultiplier: 0.7,
-// 	},
-// 	{
-// 		Name:              "360p",
-// 		Resolution:        360,
-// 		Width:             640,
-// 		VideoBitrate:      1000,
-// 		AudioBitrate:      128,
-// 		BitrateMultiplier: 0.6,
-// 	},
-// }
-
 type StorageElement struct {
 	TYPE    string                   `json:"type"`
 	Options interface{}              `json:"options"`
@@ -198,6 +155,7 @@ func LoadConfig() {
 	NewConfig = Config
 	kosmixutil.InitKeys(Config.Metadata.Tmdb, Config.Metadata.Omdb, Config.Metadata.TmdbImgLang, Config.Metadata.TmdbLang)
 	SetupCachePaths(Config.CachePath)
+
 }
 
 type TranscoderEditableSettings struct {
