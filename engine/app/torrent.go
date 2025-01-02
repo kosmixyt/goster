@@ -171,9 +171,7 @@ func AssignTorrentToMedia(db *gorm.DB, user *User, movie *MOVIE, season *SEASON,
 	}
 	RegisterFilesInTorrent(item, movie, season)
 	return nil
-}
-
-// for tv shows db season.episodes must be preloaded
+} // for tv shows db season.episodes must be preloaded
 func RegisterFilesInTorrent(item *GlTorrentItem, movie *MOVIE, season *SEASON) []*FILE {
 	files := item.Torrent.Files()
 	renders := make([]*FILE, len(files))
@@ -512,7 +510,6 @@ func InitTorrents(db *gorm.DB) {
 	}
 	go handlers_push_db()
 }
-
 func handlers_push_db() {
 	fmt.Println("Starting handlers")
 	for {

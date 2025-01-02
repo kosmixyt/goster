@@ -2,8 +2,8 @@ package engine
 
 import (
 	"fmt"
-
 	"gorm.io/gorm"
+	"sort"
 )
 
 type WATCHING struct {
@@ -23,7 +23,7 @@ type WATCHING struct {
 	EPISODE_ID *uint    `gorm:"default:null"`
 }
 
-func (w *WATCHING) GetNextFile() *SKINNY_RENDER {
+func (w *WATCHING) GetNextFile() *NextFile {
 	if w.USER == nil {
 		panic("Invalid user")
 	}
@@ -31,29 +31,63 @@ func (w *WATCHING) GetNextFile() *SKINNY_RENDER {
 		similars := w.MOVIE.SimilarMovies(w.USER.SkinnyMoviePreloads, 4)
 		if len(similars) == 0 {
 			fmt.Println("[WARN] No similar movie found for movie", w.MOVIE.ID)
-			return &SKINNY_RENDER{}
+			return nil
 		}
-		sim := similars[0].Skinny(w)
-		return &sim
+		sim := similars[0]
+		if !sim.HasFile(nil) {
+			fmt.Println("[WARN] No file found for similar movie", sim.ID)
+			return nil
+		}
+		return sim.FILES[0].toNextFile(nil, &sim)
 	}
 	if w.TV != nil {
-		WatchingOfEpisode := w.EPISODE
-		seasons := w.TV.SEASON
-		for _, s := range seasons {
-			for _, e := range s.EPISODES {
-				if e.ID == WatchingOfEpisode.ID {
-					continue
-				}
-				if e.NUMBER > WatchingOfEpisode.NUMBER {
-					// return &SKINNY_RENDER{}
-					// next
-				}
-			}
+		next := w.GetNextEpisode()
+		if next == nil {
+			return nil
 		}
-		return &SKINNY_RENDER{}
+		if !next.HasFile(nil) {
+			fmt.Println("[WARN] No file found for next episode", next.ID)
+			return nil
+		}
+		return next.FILES[0].toNextFile(next, nil)
 	}
 	fmt.Println("[WARN] No media type found for watching", w.ID)
 	panic("Invalid type")
+}
+func (w *WATCHING) GetNextEpisode() *EPISODE {
+	if w.EPISODE == nil || w.TV == nil {
+		return nil
+	}
+	currentSeason := w.EPISODE.SEASON
+	currentEpisodeNumber := w.EPISODE.NUMBER
+	// Trier les épisodes de la saison actuelle
+	sort.Slice(currentSeason.EPISODES, func(i, j int) bool {
+		return currentSeason.EPISODES[i].NUMBER < currentSeason.EPISODES[j].NUMBER
+	})
+	// Trouver le prochain épisode dans la même saison
+	for _, episode := range currentSeason.EPISODES {
+		if episode.NUMBER > currentEpisodeNumber {
+			return episode
+		}
+	}
+	// Trier les saisons
+	sort.Slice(w.TV.SEASON, func(i, j int) bool {
+		return w.TV.SEASON[i].NUMBER < w.TV.SEASON[j].NUMBER
+	})
+
+	// Trouver le prochain épisode dans les saisons suivantes
+	for _, season := range w.TV.SEASON {
+		if season.NUMBER > currentSeason.NUMBER {
+			sort.Slice(season.EPISODES, func(i, j int) bool {
+				return season.EPISODES[i].NUMBER < season.EPISODES[j].NUMBER
+			})
+			if len(season.EPISODES) > 0 {
+				return season.EPISODES[0]
+			}
+		}
+	}
+	// Aucun épisode suivant trouvé
+	return nil
 }
 func (w *WATCHING) ToSkinny() SKINNY_RENDER {
 	if w.MOVIE != nil {
