@@ -43,7 +43,7 @@ var TORRENT_ITEMS = []*GlTorrentItem{}
 
 func GetTorrent(uuid uint) *GlTorrentItem {
 	for _, item := range TORRENT_ITEMS {
-		if (item.DB_ID) == uuid {
+		if item.DB_ITEM.ID == uuid {
 			return item
 		}
 	}
@@ -51,7 +51,7 @@ func GetTorrent(uuid uint) *GlTorrentItem {
 }
 func DeleteTorrent(uuid uint) {
 	for i, item := range TORRENT_ITEMS {
-		if (item.DB_ID) == uuid {
+		if item.DB_ITEM.ID == uuid {
 			TORRENT_ITEMS = append(TORRENT_ITEMS[:i], TORRENT_ITEMS[i+1:]...)
 			return
 		}
@@ -183,7 +183,7 @@ func RegisterFilesInTorrent(item *GlTorrentItem, movie *MOVIE, season *SEASON) [
 		fileObject := files[i]
 		fileObject.SetPriority(torrent.PiecePriorityNone)
 		file := FILE{
-			TORRENT_ID: item.DB_ID,
+			TORRENT_ID: item.DB_ITEM.ID,
 			// PATH:               filepath.Dir(Config.Torrents.DownloadPath + fileObject.Path()),
 			SUB_PATH:           filepath.Dir(fileObject.Path()),
 			StoragePathElement: nil,
@@ -281,11 +281,11 @@ func AddTorrent(user *User, torrent *Torrent_File, mediaId uint, mediaType strin
 	<-torrentElem.GotInfo()
 	progress("Torrent info received")
 	item_tos := GlTorrentItem{
-		Torrent:    torrentElem,
-		DB_ID:      torrentItemDb.ID,
-		OWNER_ID:   user.ID,
-		MEDIA_TYPE: mediaType,
-		MEDIA_UUID: mediaId,
+		Torrent:  torrentElem,
+		DB_ITEM:  &torrentItemDb,
+		OWNER_ID: user.ID,
+		//MEDIA_TYPE: mediaType,
+		//MEDIA_UUID: mediaId,
 	}
 	TORRENT_ITEMS = append(TORRENT_ITEMS, &item_tos)
 	progress("Registering handlers")
@@ -475,31 +475,13 @@ func InitTorrents(db *gorm.DB) {
 				torrentElem.DisallowDataDownload()
 				torrentElem.DisallowDataUpload()
 			}
-			isMovie := false
-			itemUuid := uint(0)
-			for _, file := range torrentItem.FILES {
-				if file.MOVIE_ID != 0 {
-					isMovie = true
-					itemUuid = (file.MOVIE_ID)
-				}
-				if file.TV_ID != 0 {
-					itemUuid = (file.TV_ID)
-				}
-			}
 			for _, file := range torrentElem.Files() {
 				file.SetPriority(torrent.PiecePriorityNone)
 			}
 			TORRENT_ITEMS = append(TORRENT_ITEMS, &GlTorrentItem{
 				OWNER_ID: torrentItem.USER_ID,
 				Torrent:  torrentElem,
-				DB_ID:    torrentItem.ID,
-				MEDIA_TYPE: func() string {
-					if isMovie {
-						return Movie
-					}
-					return Tv
-				}(),
-				MEDIA_UUID: itemUuid,
+				DB_ITEM:  torrentItem,
 			})
 			go RegisterHandlers(torrentElem, torrentItem, db, &torrentItem.USER)
 			channels <- nil
@@ -625,12 +607,7 @@ func MoveTargetStorage(torrentItem *torrent.Torrent, dbElement *Torrent, db *gor
 		}
 		db.Model(file).Update("PATH", path.Join(targetPath, dirInTorrent))
 	}
-	var item *GlTorrentItem
-	for _, e := range TORRENT_ITEMS {
-		if e.DB_ID == dbElement.ID {
-			item = e
-		}
-	}
+	item := GetTorrent(dbElement.ID)
 	if item.Torrent == nil {
 		panic("Torrent not found")
 	}
@@ -684,7 +661,7 @@ func CleanDeleteTorrent(withFiles bool, torrent *GlTorrentItem, db *gorm.DB) err
 		panic("Torrent not found")
 	}
 	var files []*FILE
-	if err := db.Preload("TORRENT").Find(&files, "torrent_id = ?", torrent.DB_ID).Error; err != nil {
+	if err := db.Preload("TORRENT").Find(&files, "torrent_id = ?", torrent.DB_ITEM).Error; err != nil {
 		panic(err)
 	}
 	if !withFiles && files[0].TORRENT.DL_PATH == Config.Torrents.DownloadPath {
@@ -698,12 +675,12 @@ func CleanDeleteTorrent(withFiles bool, torrent *GlTorrentItem, db *gorm.DB) err
 		if !ok {
 			continue
 		}
-		if v.TORRENT_ID == torrent.DB_ID {
+		if v.TORRENT_ID == torrent.DB_ITEM.ID {
 			tr.Destroy("Torrent deleted")
 		}
 	}
 	for _, convert := range Converts {
-		if convert.SOURCE_FILE.TORRENT_ID == torrent.DB_ID {
+		if convert.SOURCE_FILE.TORRENT_ID == torrent.DB_ITEM.ID {
 			convert.Command.Process.Kill()
 			convert.Task.SetAsError(errors.New("Torrent deleted"))
 			convert.Task.SetAsFinished()
@@ -728,10 +705,10 @@ func CleanDeleteTorrent(withFiles bool, torrent *GlTorrentItem, db *gorm.DB) err
 			db.Unscoped().Where("file_id = ?", file.ID).Delete(&WATCHING{})
 			db.Unscoped().Delete(file)
 		} else {
-			db.Model(&FILE{}).Where("torrent_id = ?", torrent.DB_ID).Update("torrent_id", nil)
+			db.Model(&FILE{}).Where("torrent_id = ?", torrent.DB_ITEM.ID).Update("torrent_id", nil)
 		}
 	}
-	DeleteTorrent(torrent.DB_ID)
+	DeleteTorrent(torrent.DB_ITEM.ID)
 	dbtorrent = files[0].TORRENT
 	if dbtorrent == nil {
 		panic("Torrent not found")

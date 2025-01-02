@@ -8,12 +8,23 @@ import (
 )
 
 type GlTorrentItem struct {
-	OWNER_ID   uint
-	Torrent    *torrent.Torrent
-	DB_ID      uint
-	MEDIA_TYPE string
-	MEDIA_UUID uint
+	OWNER_ID uint
+	Torrent  *torrent.Torrent
+	DB_ITEM  *Torrent
+	//MOVIE    *MOVIE
+	//TV       *TV
+	//SEASON   *SEASON
 }
+
+//func (t *GlTorrentItem) isMovie() bool {
+//	return t.MOVIE != nil
+//}
+//func (t *GlTorrentItem) Media_type() string {
+//	if t.isMovie() {
+//		return "movie"
+//	}
+//	return "tv"
+//}
 
 type Record struct {
 	gorm.Model
