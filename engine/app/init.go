@@ -28,7 +28,7 @@ func GetDbConn() *gorm.DB {
 		panic("Unknown database driver")
 	}
 	dbClient, err := gorm.Open(connector, &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Info),
+		Logger: logger.Default.LogMode(logger.Error),
 	})
 	if err != nil {
 		panic(err)

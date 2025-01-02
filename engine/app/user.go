@@ -208,7 +208,7 @@ func (user *User) RenderMoviePreloads() *gorm.DB {
 		Preload("GENRE").
 		Preload("PROVIDERS").
 		Preload("FILES.WATCHING", "USER_ID = ?", user.ID).
-		Preload("WATCHLISTS", "USER_ID = ?", user.ID)
+		Preload("WATCHLISTS", "id= ?", user.ID)
 
 }
 func (user *User) SkinnyMoviePreloads() *gorm.DB {
@@ -230,6 +230,7 @@ func (user *User) SkinnyTvPreloads() *gorm.DB {
 func (user *User) RenderTvPreloads() *gorm.DB {
 	return db.Preload("GENRE").
 		Preload("PROVIDERS").
+		Preload("WATCHLISTS", "id= ?", user.ID).
 		Preload("FILES.WATCHING", "USER_ID = ?", user.ID).
 		Preload("SEASON").
 		Preload("SEASON.EPISODES").
@@ -258,8 +259,11 @@ func (user *User) AddWatchListMovie(movie MOVIE) {
 			return
 		}
 	}
-	user.WATCH_LIST_MOVIES = append(user.WATCH_LIST_MOVIES, movie)
-	db.Save(user)
+	fmt.Println("adding movie to watchlist")
+
+	// user.WATCH_LIST_MOVIES = append(user.WATCH_LIST_MOVIES, movie)
+	// db.Save(user)
+	db.Model(user).Association("WATCH_LIST_MOVIES").Append(&movie)
 }
 func (user *User) AddWatchListTv(tv TV) {
 	for _, element := range user.WATCH_LIST_TVS {
@@ -267,8 +271,9 @@ func (user *User) AddWatchListTv(tv TV) {
 			return
 		}
 	}
-	user.WATCH_LIST_TVS = append(user.WATCH_LIST_TVS, tv)
-	db.Save(user)
+	// user.WATCH_LIST_TVS = append(user.WATCH_LIST_TVS, tv)
+	// db.Save(user)
+	db.Model(user).Association("WATCH_LIST_TVS").Append(&tv)
 }
 func (user *User) RemoveWatchListMovie(movie MOVIE) {
 	indexOf := slices.IndexFunc(user.WATCH_LIST_MOVIES, func(m MOVIE) bool {
